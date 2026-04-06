@@ -444,6 +444,47 @@ const ROUTES = {
   '山形市-鹿児島市': { km: 1520, toll: 31350 },
 };
 
+// ===== 都市座標DB（緯度・経度）- 全ルート自動計算用 =====
+const CITY_COORDS = {
+  '山形市':    [38.240, 140.363], '天童市':    [38.362, 140.377],
+  '東根市':    [38.430, 140.393], '上山市':    [38.149, 140.274],
+  '寒河江市':  [38.378, 140.271], '新庄市':    [38.763, 140.303],
+  '米沢市':    [37.921, 140.117], '酒田市':    [38.914, 139.843],
+  '鶴岡市':    [38.730, 139.826], '長井市':    [38.108, 139.983],
+  '村山市':    [38.484, 140.383], '仙台市':    [38.268, 140.869],
+  '福島市':    [37.760, 140.474], '郡山市':    [37.400, 140.374],
+  '秋田市':    [39.718, 140.102], '盛岡市':    [39.703, 141.153],
+  '青森市':    [40.824, 140.740], '東京都内':  [35.689, 139.692],
+  '東京23区':  [35.689, 139.692], '横浜市':    [35.444, 139.638],
+  'さいたま市':[35.861, 139.645], '千葉市':    [35.608, 140.123],
+  '宇都宮市':  [36.555, 139.883], '前橋市':    [36.389, 139.063],
+  '新潟市':    [37.916, 139.036], '長野市':    [36.651, 138.181],
+  '名古屋市':  [35.181, 136.906], '金沢市':    [36.561, 136.656],
+  '静岡市':    [34.977, 138.383], '大阪市':    [34.693, 135.502],
+  '京都市':    [35.011, 135.768], '神戸市':    [34.690, 135.196],
+  '広島市':    [34.396, 132.459], '岡山市':    [34.655, 133.919],
+  '高松市':    [34.340, 134.043], '松山市':    [33.839, 132.765],
+  '福岡市':    [33.590, 130.401], '北九州市':  [33.883, 130.875],
+  '熊本市':    [32.803, 130.708], '鹿児島市':  [31.596, 130.557],
+};
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371, d2r = Math.PI / 180;
+  const dLat = (lat2 - lat1) * d2r, dLng = (lng2 - lng1) * d2r;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function estimateRoute(o, d) {
+  const c1 = CITY_COORDS[o], c2 = CITY_COORDS[d];
+  if (!c1 || !c2) return null;
+  const straight = haversine(c1[0], c1[1], c2[0], c2[1]);
+  const factor = straight < 30 ? 1.55 : straight < 80 ? 1.40 : straight < 200 ? 1.30 : straight < 500 ? 1.25 : 1.20;
+  const km = Math.round(straight * factor);
+  const toll = km > 40 ? Math.round(km * 20 / 100) * 100 : 0;
+  return { km, toll, isEstimate: true };
+}
+
 let fareType = 'distance';
 let hwyMode = 'auto';
 
@@ -476,9 +517,16 @@ function onRouteChange() {
       info.textContent = `📏 距離: ${ROUTES[key].km}km`;
       box.classList.remove('show');
     } else {
-      info.style.display = 'block';
-      info.textContent = '⚠️ このルートは距離を手入力してください';
-      box.classList.add('show');
+      const est = estimateRoute(o, d);
+      if (est) {
+        info.style.display = 'block';
+        info.textContent = `📏 距離（推定）: 約${est.km}km`;
+        box.classList.remove('show');
+      } else {
+        info.style.display = 'block';
+        info.textContent = '⚠️ このルートは距離を手入力してください';
+        box.classList.add('show');
+      }
     }
   } else {
     info.style.display = 'none';
@@ -521,14 +569,19 @@ function calculate() {
   if (o === d)  { alert('出発地と目的地が同じです'); return; }
 
   const key = getKey(o, d);
-  let km, tollBase;
+  let km, tollBase, isEstimate = false;
   if (key) {
     km = ROUTES[key].km;
     tollBase = ROUTES[key].toll;
   } else {
-    km = parseInt(document.getElementById('manualKm').value);
-    if (!km || km < 1) { alert('距離を入力してください'); return; }
-    tollBase = km > 40 ? Math.round(km * 20) : 0;
+    const est = estimateRoute(o, d);
+    if (est) {
+      km = est.km; tollBase = est.toll; isEstimate = true;
+    } else {
+      km = parseInt(document.getElementById('manualKm').value);
+      if (!km || km < 1) { alert('距離を入力してください'); return; }
+      tollBase = km > 40 ? Math.round(km * 20) : 0;
+    }
   }
 
   const useHighway = hwyMode === 'yes' ? true : hwyMode === 'no' ? false : km >= 40;
@@ -544,9 +597,11 @@ function calculate() {
 
   // 表示
   document.getElementById('rTotal').textContent = '¥' + total.toLocaleString();
-  document.getElementById('rSub').textContent = toll > 0 ? `（高速代±数百円の変動あり）` : '';
+  document.getElementById('rSub').textContent = isEstimate
+    ? '※距離は推定値です。実走距離で金額が確定します。'
+    : (toll > 0 ? '（高速代±数百円の変動あり）' : '');
   document.getElementById('rRoute').textContent = `${o} → ${d}`;
-  document.getElementById('rKm').textContent = km + 'km';
+  document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
   document.getElementById('rBase').textContent = '¥' + base.toLocaleString();
 
   document.getElementById('rHighway').textContent = useHighway ? `¥${toll.toLocaleString()}（目安）` : '利用なし';
