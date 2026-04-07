@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="赤帽見積りツール">
+  <meta name="theme-color" content="#2196F3">
+  <title>赤帽見積りツール</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:      #2196F3;
+      --primary-soft: #42A5F5;
+      --primary-pale: #E3F2FD;
+      --primary-glow: rgba(33,150,243,0.18);
+      --bg:           #F0F7FF;
+      --card-bg:      #FFFFFF;
+      --border:       #BBDEFB;
+      --text:         #1A2C3D;
+      --text-mid:     #546E7A;
+      --text-light:   #90A4AE;
+      --shadow:       rgba(33,150,243,0.10);
+      --green:        #3BAA74;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; }
+    input, select, button { -webkit-appearance: none; font-size: 16px; }
+    body {
+      font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 16px 14px 32px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .header {
+      background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+      color: white;
+      padding: 22px 20px 18px;
+      border-radius: 18px;
+      text-align: center;
+      margin-bottom: 16px;
+      box-shadow: 0 6px 20px var(--primary-glow);
+    }
+    .header h1 { font-size: 19px; font-weight: 700; letter-spacing: 0.02em; }
+    .header p  { font-size: 11.5px; opacity: 0.88; margin-top: 5px; letter-spacing: 0.03em; }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 10px var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card h2 {
+      font-size: 13.5px;
+      color: var(--text-mid);
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1.5px solid #F3EAE7;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+    label {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-mid);
+      margin-bottom: 6px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    select, input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 12px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: white;
+      color: var(--text);
+      font-size: 15px;
+      margin-bottom: 14px;
+      outline: none;
+      font-family: inherit;
+    }
+    select:focus, input:focus { border-color: var(--primary); }
+    .route-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .btn-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .opt-btn {
+      flex: 1; padding: 10px 6px; border: 1.5px solid var(--border);
+      border-radius: 10px; background: white; color: var(--text-mid);
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: all .18s; font-family: inherit; min-width: 70px;
+    }
+    .opt-btn.on {
+      background: var(--primary); border-color: var(--primary);
+      color: white; box-shadow: 0 2px 8px var(--primary-glow);
+    }
+    .manual-box { display: none; }
+    .manual-box.show { display: block; }
+    .calc-btn {
+      width: 100%; padding: 17px; background: var(--primary);
+      color: white; border: none; border-radius: 14px;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+      margin-bottom: 16px; box-shadow: 0 4px 14px var(--primary-glow);
+      font-family: inherit; letter-spacing: 0.04em; transition: background .18s;
+    }
+    .calc-btn:active { background: #1565C0; }
+    #result { display: none; }
+    #result.show { display: block; }
+    .res-total {
+      background: linear-gradient(135deg, var(--primary-pale) 0%, #fff 100%);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 20px 18px 16px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .lbl { font-size: 11px; color: var(--text-mid); font-weight: 700; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .price { font-size: 36px; font-weight: 700; color: var(--primary); letter-spacing: -0.01em; }
+    .sub { font-size: 11.5px; color: var(--text-mid); margin-top: 5px; }
+    /* インボイス内訳 */
+    .invoice-breakdown {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-mid);
+      line-height: 2;
+      background: var(--primary-pale);
+      border-radius: 8px;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .invoice-breakdown .row { display: flex; justify-content: space-between; }
+    .invoice-breakdown .total-row { display: flex; justify-content: space-between; font-weight: 700; color: var(--primary); border-top: 1px solid var(--border); padding-top: 4px; margin-top: 2px; }
+    .res-detail {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    .drow { display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 7px 0; border-bottom: 1px solid #f0f4f8; font-size: 13px; }
+    .drow:last-child { border-bottom: none; }
+    .dk { color: var(--text-mid); font-size: 11.5px; font-weight: 700; white-space: nowrap; padding-right: 8px; }
+    .dv { color: var(--text); text-align: right; line-height: 1.55; }
+    .green { color: var(--green); font-weight: 700; }
+    .warn {
+      background: #FFF8E1; border: 1px solid #FFE082;
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 12.5px; color: #795548; margin-bottom: 12px; line-height: 1.55;
+    }
+    .copy-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary-pale);
+      border: 1.5px solid var(--primary);
+      border-radius: 12px;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 10px;
+      font-family: inherit;
+      letter-spacing: 0.03em;
+      transition: background .18s;
+    }
+    .copy-btn:active { background: var(--primary-pale); }
+    .note { font-size: 11px; color: var(--text-light); text-align: center; line-height: 1.85; }
+    .fare-table {
+      background: #F8FAFE;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 11.5px;
+      color: var(--text-mid);
+      line-height: 1.9;
+      margin-top: 14px;
+      border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🚚 赤帽見積りツール</h1>
+  <p>令和5年12月改定 公式運賃表準拠｜赤帽仲間共用版</p>
+</div>
+
+<!-- ルート -->
+<div class="card" id="routeCard">
+  <h2>📍 ルート</h2>
+  <div class="route-row">
+    <div>
+      <label>出発地</label>
+      <select id="origin" onchange="onRouteChange()">
+        <option value="">選択</option>
+        <optgroup label="山形県内">
+          <option>山形市</option><option>天童市</option><option>東根市</option>
+          <option>上山市</option><option>寒河江市</option><option>新庄市</option>
+          <option>米沢市</option><option>酒田市</option><option>鶴岡市</option>
+          <option>長井市</option><option>村山市</option>
+        </optgroup>
+        <optgroup label="東北">
+          <option>仙台市</option><option>福島市</option><option>郡山市</option>
+          <option>秋田市</option><option>盛岡市</option><option>青森市</option>
+        </optgroup>
+        <optgroup label="関東">
+          <option>東京都内</option><option>東京23区</option><option>横浜市</option>
+          <option>さいたま市</option><option>千葉市</option><option>宇都宮市</option>
+          <option>前橋市</option>
+        </optgroup>
+        <optgroup label="中部・北陸">
+          <option>新潟市</option><option>長野市</option><option>名古屋市</option>
+          <option>金沢市</option><option>静岡市</option>
+        </optgroup>
+        <optgroup label="関西">
+          <option>大阪市</option><option>京都市</option><option>神戸市</option>
+        </optgroup>
+        <optgroup label="中国・四国">
+          <option>広島市</option><option>岡山市</option><option>高松市</option>
+          <option>松山市</option>
+        </optgroup>
+        <optgroup label="九州">
+          <option>福岡市</option><option>北九州市</option><option>熊本市</option>
+          <option>鹿児島市</option>
+        </optgroup>
+      </select>
+    </div>
+    <div>
+      <label>目的地</label>
+      <select id="destination" onchange="onRouteChange()">
+        <option value="">選択</option>
+        <optgroup label="山形県内">
+          <option>山形市</option><option>天童市</option><option>東根市</option>
+          <option>上山市</option><option>寒河江市</option><option>新庄市</option>
+          <option>米沢市</option><option>酒田市</option><option>鶴岡市</option>
+          <option>長井市</option><option>村山市</option>
+        </optgroup>
+        <optgroup label="東北">
+          <option>仙台市</option><option>福島市</option><option>郡山市</option>
+          <option>秋田市</option><option>盛岡市</option><option>青森市</option>
+        </optgroup>
+        <optgroup label="関東">
+          <option>東京都内</option><option>東京23区</option><option>横浜市</option>
+          <option>さいたま市</option><option>千葉市</option><option>宇都宮市</option>
+          <option>前橋市</option>
+        </optgroup>
+        <optgroup label="中部・北陸">
+          <option>新潟市</option><option>長野市</option><option>名古屋市</option>
+          <option>金沢市</option><option>静岡市</option>
+        </optgroup>
+        <optgroup label="関西">
+          <option>大阪市</option><option>京都市</option><option>神戸市</option>
+        </optgroup>
+        <optgroup label="中国・四国">
+          <option>広島市</option><option>岡山市</option><option>高松市</option>
+          <option>松山市</option>
+        </optgroup>
+        <optgroup label="九州">
+          <option>福岡市</option><option>北九州市</option><option>熊本市</option>
+          <option>鹿児島市</option>
+        </optgroup>
+      </select>
+    </div>
+  </div>
+
+  <div id="routeInfo" style="display:none;"></div>
+
+  <div id="manualBox" class="manual-box">
+    <label>距離を手入力（km）※Googleマップで確認</label>
+    <input type="number" id="manualKm" placeholder="例: 45" min="1" max="2000">
+  </div>
+</div>
+
+<!-- オプション -->
+<div class="card">
+  <h2>⚙️ オプション</h2>
+
+  <label>運賃タイプ</label>
+  <div class="btn-row" style="margin-bottom:14px">
+    <button class="opt-btn on" id="typeDistance" onclick="setType('distance')">距離制</button>
+    <button class="opt-btn" id="typeTime" onclick="setType('time')">時間制（貸切）</button>
+  </div>
+
+  <div id="timeBox" style="display:none;">
+    <label>貸切時間</label>
+    <select id="hoursSelect">
+      <option value="2">2時間（基本）</option>
+      <option value="2.5">2時間30分</option>
+      <option value="3">3時間</option>
+      <option value="3.5">3時間30分</option>
+      <option value="4">4時間</option>
+      <option value="4.5">4時間30分</option>
+      <option value="5">5時間</option>
+      <option value="5.5">5時間30分</option>
+      <option value="6">6時間</option>
+      <option value="6.5">6時間30分</option>
+      <option value="7">7時間</option>
+      <option value="7.5">7時間30分</option>
+      <option value="8">8時間</option>
+      <option value="8.5">8時間30分</option>
+      <option value="9">9時間</option>
+      <option value="9.5">9時間30分</option>
+      <option value="10">10時間</option>
+      <option value="11">11時間</option>
+      <option value="12">12時間</option>
+    </select>
+    <label>走行距離（km）※任意・距離超過計算用</label>
+    <input type="number" id="timeKm" placeholder="例: 30（空白=距離超過なし）" min="0" max="500" style="margin-bottom:8px;">
+    <div class="fare-table" style="margin-top:0; margin-bottom:14px;">
+      <b>【時間制】</b> 2時間・20kmまで ¥6,050<br>
+      延長：+¥1,375/30分 ／ 距離超過：貸切時間×10kmを超えたら距離制運賃を加算
+    </div>
+  </div>
+
+  <label>高速道路</label>
+  <div class="btn-row" style="margin-bottom:14px">
+    <button class="opt-btn on" id="hwyAuto" onclick="setHwy('auto')">自動判定</button>
+    <button class="opt-btn" id="hwyYes" onclick="setHwy('yes')">あり</button>
+    <button class="opt-btn" id="hwyNo" onclick="setHwy('no')">なし</button>
+  </div>
+
+  <label>インボイス（適格請求書）</label>
+  <div class="btn-row">
+    <button class="opt-btn on" id="invNo" onclick="setInvoice('no')">未登録</button>
+    <button class="opt-btn" id="invYes" onclick="setInvoice('yes')">登録済み</button>
+  </div>
+</div>
+
+<button class="calc-btn" onclick="calculate()">💴 見積もりを計算</button>
+
+<!-- 結果 -->
+<div id="result">
+  <div class="res-total">
+    <div class="lbl" id="totalLabel">お見積もり金額（税込）</div>
+    <div class="price" id="rTotal">-</div>
+    <div class="sub" id="rSub"></div>
+    <!-- インボイス登録時の内訳 -->
+    <div class="invoice-breakdown" id="invoiceBreakdown" style="display:none;">
+      <div class="row"><span>運賃（税別）</span><span id="iBefore">-</span></div>
+      <div class="row"><span>消費税（10%）</span><span id="iTax">-</span></div>
+      <div class="row" id="iTollRow" style="display:none;"><span>高速代（実費）</span><span id="iToll">-</span></div>
+      <div class="row" id="iTokyoRow" style="display:none;"><span>地区割増</span><span id="iTokyo">-</span></div>
+      <div class="total-row"><span>合計（税込）</span><span id="iTotal">-</span></div>
+    </div>
+  </div>
+  <div class="res-detail">
+    <div class="drow"><span class="dk">ルート</span><span class="dv" id="rRoute">-</span></div>
+    <div class="drow"><span class="dk">距離</span><span class="dv" id="rKm">-</span></div>
+    <div class="drow"><span class="dk">基本運賃</span><span class="dv" id="rBase">-</span></div>
+    <div class="drow"><span class="dk">高速代（目安）</span><span class="dv" id="rHighway">-</span></div>
+    <div class="drow"><span class="dk">所要時間（目安）</span><span class="dv" id="rTime">-</span></div>
+    <div class="drow"><span class="dk">貨物保険</span><span class="dv green">✅ 300万円まで補償</span></div>
+  </div>
+  <div id="tokyoNote" class="warn" style="display:none">📌 東京23区・大阪市は地区割増 +¥440 が加算されます。</div>
+  <button class="copy-btn" onclick="copyText()">📋 見積もりをコピー（LINE・メール用）</button>
+  <p class="note">※高速代は実費精算。正確な金額は現地確認後にご案内します。</p>
+
+  <div class="fare-table">
+    <b>【距離制運賃 参考】</b><br>
+    〜20km: ¥5,500 固定<br>
+    21〜50km: +¥242/km（超過分）<br>
+    51〜100km: +¥187/km（超過分）<br>
+    101〜150km: +¥154/km（超過分）<br>
+    151km〜: +¥132/km（超過分）<br>
+    ※すべて税込（消費税10%）
+  </div>
+</div>
+
+<script>
+// ===== 主要ルートDB（km, 高速代目安） =====
+const ROUTES = {
+  // 山形県内
+  '山形市-天童市':   { km: 13,   toll: 0     },
+  '山形市-東根市':   { km: 22,   toll: 0     },
+  '山形市-上山市':   { km: 15,   toll: 0     },
+  '山形市-寒河江市': { km: 25,   toll: 0     },
+  '山形市-村山市':   { km: 30,   toll: 0     },
+  '山形市-新庄市':   { km: 70,   toll: 1210  },
+  '山形市-米沢市':   { km: 45,   toll: 1100  },
+  '山形市-長井市':   { km: 40,   toll: 0     },
+  '山形市-酒田市':   { km: 105,  toll: 2310  },
+  '山形市-鶴岡市':   { km: 88,   toll: 1870  },
+  '鶴岡市-酒田市':   { km: 30,   toll: 0     },
+  '天童市-東根市':   { km: 10,   toll: 0     },
+  // 東北
+  '山形市-仙台市':   { km: 87,   toll: 2200  },
+  '山形市-福島市':   { km: 80,   toll: 1870  },
+  '山形市-郡山市':   { km: 115,  toll: 2530  },
+  '山形市-秋田市':   { km: 155,  toll: 3300  },
+  '山形市-盛岡市':   { km: 195,  toll: 4180  },
+  '山形市-青森市':   { km: 295,  toll: 6160  },
+  '天童市-仙台市':   { km: 80,   toll: 2200  },
+  '東根市-仙台市':   { km: 75,   toll: 2090  },
+  '新庄市-仙台市':   { km: 120,  toll: 2860  },
+  '米沢市-福島市':   { km: 42,   toll: 1100  },
+  '酒田市-秋田市':   { km: 90,   toll: 1870  },
+  // 関東
+  '山形市-東京都内': { km: 340,  toll: 7150  },
+  '山形市-東京23区': { km: 340,  toll: 7150  },
+  '山形市-横浜市':   { km: 365,  toll: 7700  },
+  '山形市-さいたま市':{ km: 315, toll: 6820  },
+  '山形市-千葉市':   { km: 360,  toll: 7590  },
+  '山形市-宇都宮市': { km: 245,  toll: 5280  },
+  '山形市-前橋市':   { km: 280,  toll: 6050  },
+  // 中部・北陸
+  '山形市-新潟市':   { km: 200,  toll: 4290  },
+  '山形市-長野市':   { km: 390,  toll: 8140  },
+  '山形市-名古屋市': { km: 650,  toll: 13200 },
+  '山形市-金沢市':   { km: 490,  toll: 10230 },
+  '山形市-静岡市':   { km: 530,  toll: 10890 },
+  // 関西
+  '山形市-大阪市':   { km: 800,  toll: 16500 },
+  '山形市-京都市':   { km: 770,  toll: 15950 },
+  '山形市-神戸市':   { km: 830,  toll: 17050 },
+  // 中国・四国
+  '山形市-広島市':   { km: 1000, toll: 20900 },
+  '山形市-岡山市':   { km: 900,  toll: 18700 },
+  '山形市-高松市':   { km: 980,  toll: 20350 },
+  '山形市-松山市':   { km: 1050, toll: 21780 },
+  // 九州
+  '山形市-福岡市':   { km: 1200, toll: 24750 },
+  '山形市-北九州市': { km: 1170, toll: 24200 },
+  '山形市-熊本市':   { km: 1310, toll: 27060 },
+  '山形市-鹿児島市': { km: 1520, toll: 31350 },
+};
+
+// ===== 都市座標DB（緯度・経度）- 全ルート自動計算用 =====
+const CITY_COORDS = {
+  '山形市':    [38.240, 140.363], '天童市':    [38.362, 140.377],
+  '東根市':    [38.430, 140.393], '上山市':    [38.149, 140.274],
+  '寒河江市':  [38.378, 140.271], '新庄市':    [38.763, 140.303],
+  '米沢市':    [37.921, 140.117], '酒田市':    [38.914, 139.843],
+  '鶴岡市':    [38.730, 139.826], '長井市':    [38.108, 139.983],
+  '村山市':    [38.484, 140.383], '仙台市':    [38.268, 140.869],
+  '福島市':    [37.760, 140.474], '郡山市':    [37.400, 140.374],
+  '秋田市':    [39.718, 140.102], '盛岡市':    [39.703, 141.153],
+  '青森市':    [40.824, 140.740], '東京都内':  [35.689, 139.692],
+  '東京23区':  [35.689, 139.692], '横浜市':    [35.444, 139.638],
+  'さいたま市':[35.861, 139.645], '千葉市':    [35.608, 140.123],
+  '宇都宮市':  [36.555, 139.883], '前橋市':    [36.389, 139.063],
+  '新潟市':    [37.916, 139.036], '長野市':    [36.651, 138.181],
+  '名古屋市':  [35.181, 136.906], '金沢市':    [36.561, 136.656],
+  '静岡市':    [34.977, 138.383], '大阪市':    [34.693, 135.502],
+  '京都市':    [35.011, 135.768], '神戸市':    [34.690, 135.196],
+  '広島市':    [34.396, 132.459], '岡山市':    [34.655, 133.919],
+  '高松市':    [34.340, 134.043], '松山市':    [33.839, 132.765],
+  '福岡市':    [33.590, 130.401], '北九州市':  [33.883, 130.875],
+  '熊本市':    [32.803, 130.708], '鹿児島市':  [31.596, 130.557],
+};
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371, d2r = Math.PI / 180;
+  const dLat = (lat2 - lat1) * d2r, dLng = (lng2 - lng1) * d2r;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function estimateRoute(o, d) {
+  const c1 = CITY_COORDS[o], c2 = CITY_COORDS[d];
+  if (!c1 || !c2) return null;
+  const straight = haversine(c1[0], c1[1], c2[0], c2[1]);
+  const factor = straight < 30 ? 1.55 : straight < 80 ? 1.40 : straight < 200 ? 1.30 : straight < 500 ? 1.25 : 1.20;
+  const km = Math.round(straight * factor);
+  const toll = km > 40 ? Math.round(km * 20 / 100) * 100 : 0;
+  return { km, toll, isEstimate: true };
+}
+
+let fareType = 'distance';
+let hwyMode = 'auto';
+let invoiceMode = 'no'; // 'no'=未登録, 'yes'=登録済み
+
+function setType(t) {
+  fareType = t;
+  document.getElementById('typeDistance').classList.toggle('on', t==='distance');
+  document.getElementById('typeTime').classList.toggle('on', t==='time');
+  document.getElementById('timeBox').style.display = t==='time' ? 'block' : 'none';
+  const rc = document.getElementById('routeCard');
+  rc.style.opacity = t==='time' ? '0.4' : '1';
+  rc.style.pointerEvents = t==='time' ? 'none' : 'auto';
+}
+
+function setHwy(m) {
+  hwyMode = m;
+  ['Auto','Yes','No'].forEach(s =>
+    document.getElementById('hwy'+s).classList.toggle('on', m===s.toLowerCase())
+  );
+}
+
+function setInvoice(v) {
+  invoiceMode = v;
+  document.getElementById('invNo').classList.toggle('on', v==='no');
+  document.getElementById('invYes').classList.toggle('on', v==='yes');
+}
+
+function getKey(a, b) {
+  if (!a || !b) return null;
+  return ROUTES[a+'-'+b] ? a+'-'+b : (ROUTES[b+'-'+a] ? b+'-'+a : null);
+}
+
+function onRouteChange() {
+  const o = document.getElementById('origin').value;
+  const d = document.getElementById('destination').value;
+  const info = document.getElementById('routeInfo');
+  const box  = document.getElementById('manualBox');
+  if (o && d && o !== d) {
+    const key = getKey(o, d);
+    if (key) {
+      info.style.display = 'block';
+      info.textContent = `📏 距離: ${ROUTES[key].km}km`;
+      box.classList.remove('show');
+    } else {
+      const est = estimateRoute(o, d);
+      if (est) {
+        info.style.display = 'block';
+        info.textContent = `📏 距離（推定）: 約${est.km}km`;
+        box.classList.remove('show');
+      } else {
+        info.style.display = 'block';
+        info.textContent = '⚠️ このルートは距離を手入力してください';
+        box.classList.add('show');
+      }
+    }
+  } else {
+    info.style.display = 'none';
+    box.classList.remove('show');
+  }
+}
+
+// ===== 距離制運賃計算（税込） =====
+function calcDistanceFare(km) {
+  let fare = 5000;
+  if (km > 20)  fare += (Math.min(km, 50)  - 20)  * 220;
+  if (km > 50)  fare += (Math.min(km, 100) - 50)  * 170;
+  if (km > 100) fare += (Math.min(km, 150) - 100) * 140;
+  if (km > 150) fare += (km - 150) * 120;
+  return Math.round(fare * 1.1);
+}
+
+// ===== 時間制運賃計算（税込） =====
+function calcTimeFare(hours, km) {
+  const base = 5500;
+  const extraHalf = Math.ceil(Math.max(0, hours - 2) * 2);
+  const extraTime = extraHalf * 1250;
+  const allowedKm = hours * 10;
+  const extraKm = km > allowedKm ? calcDistanceFare(km - allowedKm) : 0;
+  return Math.round((base + extraTime) * 1.1) + extraKm;
+}
+
+function calcTime(km, highway) {
+  const spd = highway ? 70 : 38;
+  const driveMin = Math.round(km / spd * 60) + (highway ? 20 : 5);
+  const restCount = Math.floor(driveMin / (4 * 60));
+  const restMin = restCount * 30;
+  const total = driveMin + restMin;
+  const h = Math.floor(total / 60), m = total % 60;
+  const restNote = restCount > 0 ? `（休憩${restCount}回含む）` : '';
+  return (h > 0 ? `約${h}時間${m > 0 ? m+'分' : ''}` : `約${m}分`) + restNote;
+}
+
+function calculate() {
+  const o = document.getElementById('origin').value;
+  const d = document.getElementById('destination').value;
+  const hours = parseFloat(document.getElementById('hoursSelect').value) || 2;
+
+  let km = 0, tollBase = 0, isEstimate = false;
+  if (fareType === 'distance') {
+    if (!o || !d) { alert('出発地と目的地を選択してください'); return; }
+    if (o === d)  { alert('出発地と目的地が同じです'); return; }
+    const key = getKey(o, d);
+    if (key) {
+      km = ROUTES[key].km;
+      tollBase = ROUTES[key].toll;
+    } else {
+      const est = estimateRoute(o, d);
+      if (est) {
+        km = est.km; tollBase = est.toll; isEstimate = true;
+      } else {
+        km = parseInt(document.getElementById('manualKm').value);
+        if (!km || km < 1) { alert('距離を入力してください'); return; }
+        tollBase = km > 40 ? Math.round(km * 20) : 0;
+      }
+    }
+  } else {
+    const manKm = parseInt(document.getElementById('timeKm').value);
+    km = manKm > 0 ? manKm : 0;
+  }
+
+  const useHighway = hwyMode === 'yes' ? true : hwyMode === 'no' ? false : km >= 40;
+  const toll = useHighway ? tollBase : 0;
+
+  let base = fareType === 'distance' ? calcDistanceFare(km) : calcTimeFare(hours, km);
+
+  // 東京23区割増
+  const tokyoExtra = (o.includes('東京23区') || d.includes('東京23区')) ? 440 : 0;
+
+  const total = base + toll + tokyoExtra;
+
+  // 税別金額・消費税（インボイス用）
+  const baseExTax = Math.round(base / 1.1);
+  const taxAmt = base - baseExTax;
+
+  // 合計金額表示
+  document.getElementById('rTotal').textContent = '¥' + total.toLocaleString();
+  document.getElementById('rSub').textContent = isEstimate
+    ? '※距離は推定値です。実走距離で金額が確定します。'
+    : (toll > 0 ? '（高速代±数百円の変動あり）' : '');
+
+  // インボイス内訳表示
+  const breakdown = document.getElementById('invoiceBreakdown');
+  if (invoiceMode === 'yes') {
+    document.getElementById('totalLabel').textContent = 'お見積もり金額（税込）';
+    breakdown.style.display = 'block';
+    document.getElementById('iBefore').textContent = '¥' + baseExTax.toLocaleString();
+    document.getElementById('iTax').textContent    = '¥' + taxAmt.toLocaleString();
+    document.getElementById('iToll').textContent   = '¥' + toll.toLocaleString();
+    document.getElementById('iTotal').textContent  = '¥' + total.toLocaleString();
+    const tollRow = document.getElementById('iTollRow');
+    tollRow.style.display = toll > 0 ? 'flex' : 'none';
+    const tokyoRow = document.getElementById('iTokyoRow');
+    if (tokyoExtra > 0) {
+      tokyoRow.style.display = 'flex';
+      document.getElementById('iTokyo').textContent = '¥' + tokyoExtra.toLocaleString();
+    } else {
+      tokyoRow.style.display = 'none';
+    }
+  } else {
+    document.getElementById('totalLabel').textContent = 'お見積もり金額（税込）';
+    breakdown.style.display = 'none';
+  }
+
+  document.getElementById('rRoute').textContent = fareType === 'time'
+    ? `時間制 ${hours}時間貸切`
+    : `${o} → ${d}`;
+  document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
+  document.getElementById('rBase').textContent = fareType === 'time'
+    ? `¥${base.toLocaleString()}（${hours}時間・${km}km）`
+    : '¥' + base.toLocaleString();
+  document.getElementById('rHighway').textContent = useHighway ? `¥${toll.toLocaleString()}（目安）` : '利用なし';
+  document.getElementById('rTime').textContent = calcTime(km, useHighway);
+  document.getElementById('tokyoNote').style.display = tokyoExtra > 0 ? 'block' : 'none';
+
+  document.getElementById('result').classList.add('show');
+  document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+
+  window._est = { o, d, km, base, baseExTax, taxAmt, toll, tokyoExtra, total,
+    time: calcTime(km, useHighway), fareType, hours };
+}
+
+function copyText() {
+  const e = window._est;
+  if (!e) return;
+
+  let lines;
+  if (invoiceMode === 'yes') {
+    // インボイス登録済み：税別・消費税・合計の内訳を明示
+    lines = [
+      '【赤帽 お見積もり】',
+      '━━━━━━━━━━━━',
+      e.fareType === 'time'
+        ? `時間制貸切：${e.hours}時間・${e.km}km`
+        : `ルート：${e.o} → ${e.d}（${e.km}km）`,
+      '━━━━━━━━━━━━',
+      `運賃（税別）：¥${e.baseExTax.toLocaleString()}`,
+      `消費税（10%）：¥${e.taxAmt.toLocaleString()}`,
+      e.toll > 0 ? `高速代（実費）：¥${e.toll.toLocaleString()}` : '',
+      e.tokyoExtra > 0 ? `地区割増：¥${e.tokyoExtra.toLocaleString()}` : '',
+      '━━━━━━━━━━━━',
+      `合計（税込）：¥${e.total.toLocaleString()}`,
+      `所要時間：${e.time}`,
+      '━━━━━━━━━━━━',
+      '✅ 貨物保険300万円補償',
+      '✅ 適格請求書（インボイス）発行可',
+    ].filter(Boolean).join('\n');
+  } else {
+    // インボイス未登録：税込み合計のみ
+    lines = [
+      '【赤帽 お見積もり】',
+      '━━━━━━━━━━━━',
+      e.fareType === 'time'
+        ? `時間制貸切：${e.hours}時間・${e.km}km`
+        : `ルート：${e.o} → ${e.d}（${e.km}km）`,
+      '━━━━━━━━━━━━',
+      `合計：¥${e.total.toLocaleString()}（税込）`,
+      `所要時間：${e.time}`,
+      '━━━━━━━━━━━━',
+      '✅ 貨物保険300万円補償',
+    ].filter(Boolean).join('\n');
+  }
+
+  navigator.clipboard.writeText(lines).then(() => {
+    alert('コピーしました！LINEやメールにそのまま貼り付けできます');
+  });
+}
+</script>
+</body>
+</html>
