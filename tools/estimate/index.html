@@ -363,7 +363,7 @@
     </select>
     <div class="fare-table" style="margin-top:0; margin-bottom:14px;">
       <b>【時間制】</b> 2時間・20kmまで ¥6,050<br>
-      延長：+¥1,100/30分 ／ 距離超過：+¥242/km（20km超）
+      延長：+¥1,375/30分 ／ 距離超過：貸切時間×10kmを超えたら距離制運賃を加算
     </div>
   </div>
 
@@ -568,11 +568,13 @@ function calcDistanceFare(km) {
 
 // ===== 時間制運賃計算（税込） =====
 function calcTimeFare(hours, km) {
-  const base = 5000;                                          // 2h・20km基本（税別）
+  const base = 5500;                                          // 2h・20km基本（税別）
   const extraHalf = Math.ceil(Math.max(0, hours - 2) * 2);   // 30分単位（2h超過分）
-  const extraTime = extraHalf * 1000;                         // 1000円/30分（税別）
-  const extraKm   = km > 20 ? (km - 20) * 220 : 0;           // 220円/km超過（税別）
-  return Math.round((base + extraTime + extraKm) * 1.1);      // 税込
+  const extraTime = extraHalf * 1250;                         // 1250円/30分（税別）= 1375円税込
+  // 距離超過：貸切時間×10kmを超えた場合、超過分に距離制運賃を加算
+  const allowedKm = hours * 10;
+  const extraKm = km > allowedKm ? calcDistanceFare(km - allowedKm) : 0; // 超過分を距離制で計算（税込済）
+  return Math.round((base + extraTime) * 1.1) + extraKm;     // 税込
 }
 
 function calcTime(km, highway) {
