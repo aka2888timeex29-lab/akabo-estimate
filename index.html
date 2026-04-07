@@ -619,9 +619,9 @@ function calculate() {
   const directKmVal = parseInt(document.getElementById('directKm').value);
   if (fareType === 'distance') {
     if (directKmVal && directKmVal > 0) {
-      // 距離直接入力モード
+      // 距離直接入力モード（高速代は計算しない）
       km = directKmVal;
-      tollBase = km > 40 ? Math.round(km * 20) : 0;
+      tollBase = 0;
       isDirect = true;
     } else if (!o || !d) {
       alert('出発地と目的地を選択するか、下の距離欄に数値を入力してください');
