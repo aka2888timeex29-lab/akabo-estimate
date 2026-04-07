@@ -638,7 +638,6 @@ function calculate() {
   const toll = useHighway ? tollBase : 0;
 
   // 基本運賃
-  const hours = parseInt(document.getElementById('hoursSelect').value) || 2;
   let base = fareType === 'distance' ? calcDistanceFare(km) : calcTimeFare(hours, km);
 
   // 東京23区割増
