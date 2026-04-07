@@ -344,7 +344,27 @@
   <label>運賃タイプ</label>
   <div class="btn-row" style="margin-bottom:14px">
     <button class="opt-btn on" id="typeDistance" onclick="setType('distance')">距離制</button>
-    <button class="opt-btn" id="typeTime" onclick="setType('time')">時間制（2h貸切）</button>
+    <button class="opt-btn" id="typeTime" onclick="setType('time')">時間制（貸切）</button>
+  </div>
+
+  <div id="timeBox" style="display:none;">
+    <label>貸切時間</label>
+    <select id="hoursSelect">
+      <option value="2">2時間（基本）</option>
+      <option value="3">3時間</option>
+      <option value="4">4時間</option>
+      <option value="5">5時間</option>
+      <option value="6">6時間</option>
+      <option value="7">7時間</option>
+      <option value="8">8時間</option>
+      <option value="9">9時間</option>
+      <option value="10">10時間</option>
+      <option value="12">12時間</option>
+    </select>
+    <div class="fare-table" style="margin-top:0; margin-bottom:14px;">
+      <b>【時間制】</b> 2時間・20kmまで ¥6,050<br>
+      延長：+¥1,100/30分 ／ 距離超過：+¥242/km（20km超）
+    </div>
   </div>
 
   <label>高速道路</label>
@@ -492,6 +512,7 @@ function setType(t) {
   fareType = t;
   document.getElementById('typeDistance').classList.toggle('on', t==='distance');
   document.getElementById('typeTime').classList.toggle('on', t==='time');
+  document.getElementById('timeBox').style.display = t==='time' ? 'block' : 'none';
 }
 function setHwy(m) {
   hwyMode = m;
@@ -545,9 +566,13 @@ function calcDistanceFare(km) {
   return Math.round(fare * 1.1); // 税込
 }
 
-// ===== 時間制運賃計算（税込） 2h基本 =====
-function calcTimeFare() {
-  return 6050; // 2時間・20kmまで基本
+// ===== 時間制運賃計算（税込） =====
+function calcTimeFare(hours, km) {
+  const base = 5000;                                          // 2h・20km基本（税別）
+  const extraHalf = Math.ceil(Math.max(0, hours - 2) * 2);   // 30分単位（2h超過分）
+  const extraTime = extraHalf * 1000;                         // 1000円/30分（税別）
+  const extraKm   = km > 20 ? (km - 20) * 220 : 0;           // 220円/km超過（税別）
+  return Math.round((base + extraTime + extraKm) * 1.1);      // 税込
 }
 
 function calcTime(km, highway) {
@@ -588,7 +613,8 @@ function calculate() {
   const toll = useHighway ? tollBase : 0;
 
   // 基本運賃
-  let base = fareType === 'distance' ? calcDistanceFare(km) : calcTimeFare();
+  const hours = parseInt(document.getElementById('hoursSelect').value) || 2;
+  let base = fareType === 'distance' ? calcDistanceFare(km) : calcTimeFare(hours, km);
 
   // 東京23区割増
   const tokyoExtra = (o.includes('東京23区') || d.includes('東京23区')) ? 440 : 0;
@@ -602,7 +628,9 @@ function calculate() {
     : (toll > 0 ? '（高速代±数百円の変動あり）' : '');
   document.getElementById('rRoute').textContent = `${o} → ${d}`;
   document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
-  document.getElementById('rBase').textContent = '¥' + base.toLocaleString();
+  document.getElementById('rBase').textContent = fareType === 'time'
+    ? `¥${base.toLocaleString()}（${hours}時間・${km}km）`
+    : '¥' + base.toLocaleString();
 
   document.getElementById('rHighway').textContent = useHighway ? `¥${toll.toLocaleString()}（目安）` : '利用なし';
   document.getElementById('rTime').textContent = calcTime(km, useHighway);
@@ -613,7 +641,7 @@ function calculate() {
   document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
 
   window._est = { o, d, km, weight, base, toll, tokyoExtra, total,
-    time: calcTime(km, useHighway), fareType };
+    time: calcTime(km, useHighway), fareType, hours };
 }
 
 function copyText() {
@@ -625,7 +653,7 @@ function copyText() {
     `ルート：${e.o} → ${e.d}（${e.km}km）`,
     e.weight ? `重量：${e.weight}kg` : '',
     '━━━━━━━━━━━━',
-    `基本運賃（${e.fareType==='distance'?'距離制':'時間制'}）：¥${e.base.toLocaleString()}`,
+    `基本運賃（${e.fareType==='distance'?'距離制':`時間制・${e.hours}h`}）：¥${e.base.toLocaleString()}`,
     e.toll > 0 ? `高速代（目安）：¥${e.toll.toLocaleString()}` : '',
     e.tokyoExtra > 0 ? `地区割増：¥${e.tokyoExtra.toLocaleString()}` : '',
     `━━━━━━━━━━━━`,
