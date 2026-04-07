@@ -6,24 +6,24 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="赤帽タイム便見積">
-  <meta name="theme-color" content="#D9523D">
+  <meta name="theme-color" content="#2196F3">
   <title>赤帽タイム便 見積もりツール</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary:      #D9523D;
-      --primary-soft: #E8705C;
-      --primary-pale: #FFF0ED;
-      --primary-glow: rgba(217,82,61,0.18);
-      --bg:           #FDF8F6;
+      --primary:      #2196F3;
+      --primary-soft: #42A5F5;
+      --primary-pale: #E3F2FD;
+      --primary-glow: rgba(33,150,243,0.18);
+      --bg:           #F0F7FF;
       --card-bg:      #FFFFFF;
-      --border:       #EEE3DF;
-      --text:         #3D3430;
-      --text-mid:     #7A6D6A;
-      --text-light:   #AAA09D;
-      --shadow:       rgba(160,100,80,0.10);
+      --border:       #BBDEFB;
+      --text:         #1A2C3D;
+      --text-mid:     #546E7A;
+      --text-light:   #90A4AE;
+      --shadow:       rgba(33,150,243,0.10);
       --green:        #3BAA74;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -38,7 +38,7 @@
       line-height: 1.6;
     }
     .header {
-      background: linear-gradient(135deg, #D9523D 0%, #E8705C 100%);
+      background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
       color: white;
       padding: 22px 20px 18px;
       border-radius: 18px;
@@ -147,7 +147,7 @@
     .calc-btn {
       width: 100%;
       padding: 17px;
-      background: linear-gradient(135deg, #D9523D 0%, #E8705C 100%);
+      background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
       color: white;
       border: none;
       border-radius: 14px;
@@ -166,7 +166,7 @@
     #result { display: none; }
     #result.show { display: block; }
     .res-total {
-      background: linear-gradient(135deg, #D9523D 0%, #E8705C 100%);
+      background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
       color: white;
       border-radius: 18px;
       padding: 24px 20px 20px;
@@ -251,7 +251,7 @@
 </div>
 
 <!-- ルート -->
-<div class="card">
+<div class="card" id="routeCard">
   <h2>📍 ルート</h2>
   <div class="route-row">
     <div>
@@ -351,16 +351,27 @@
     <label>貸切時間</label>
     <select id="hoursSelect">
       <option value="2">2時間（基本）</option>
+      <option value="2.5">2時間30分</option>
       <option value="3">3時間</option>
+      <option value="3.5">3時間30分</option>
       <option value="4">4時間</option>
+      <option value="4.5">4時間30分</option>
       <option value="5">5時間</option>
+      <option value="5.5">5時間30分</option>
       <option value="6">6時間</option>
+      <option value="6.5">6時間30分</option>
       <option value="7">7時間</option>
+      <option value="7.5">7時間30分</option>
       <option value="8">8時間</option>
+      <option value="8.5">8時間30分</option>
       <option value="9">9時間</option>
+      <option value="9.5">9時間30分</option>
       <option value="10">10時間</option>
+      <option value="11">11時間</option>
       <option value="12">12時間</option>
     </select>
+    <label>走行距離（km）※任意・距離超過計算用</label>
+    <input type="number" id="timeKm" placeholder="例: 30（空白=距離超過なし）" min="0" max="500" style="margin-bottom:8px;">
     <div class="fare-table" style="margin-top:0; margin-bottom:14px;">
       <b>【時間制】</b> 2時間・20kmまで ¥6,050<br>
       延長：+¥1,375/30分 ／ 距離超過：貸切時間×10kmを超えたら距離制運賃を加算
@@ -513,6 +524,10 @@ function setType(t) {
   document.getElementById('typeDistance').classList.toggle('on', t==='distance');
   document.getElementById('typeTime').classList.toggle('on', t==='time');
   document.getElementById('timeBox').style.display = t==='time' ? 'block' : 'none';
+  // 時間制は出発地・目的地不要なのでルートカードをグレーアウト
+  const rc = document.getElementById('routeCard');
+  rc.style.opacity = t==='time' ? '0.4' : '1';
+  rc.style.pointerEvents = t==='time' ? 'none' : 'auto';
 }
 function setHwy(m) {
   hwyMode = m;
@@ -592,23 +607,31 @@ function calculate() {
   const o = document.getElementById('origin').value;
   const d = document.getElementById('destination').value;
   const weight = 0;
-  if (!o || !d) { alert('出発地と目的地を選択してください'); return; }
-  if (o === d)  { alert('出発地と目的地が同じです'); return; }
+  const hours = parseFloat(document.getElementById('hoursSelect').value) || 2;
 
-  const key = getKey(o, d);
-  let km, tollBase, isEstimate = false;
-  if (key) {
-    km = ROUTES[key].km;
-    tollBase = ROUTES[key].toll;
-  } else {
-    const est = estimateRoute(o, d);
-    if (est) {
-      km = est.km; tollBase = est.toll; isEstimate = true;
+  // 時間制は出発地・目的地不要
+  let km = 0, tollBase = 0, isEstimate = false;
+  if (fareType === 'distance') {
+    if (!o || !d) { alert('出発地と目的地を選択してください'); return; }
+    if (o === d)  { alert('出発地と目的地が同じです'); return; }
+    const key = getKey(o, d);
+    if (key) {
+      km = ROUTES[key].km;
+      tollBase = ROUTES[key].toll;
     } else {
-      km = parseInt(document.getElementById('manualKm').value);
-      if (!km || km < 1) { alert('距離を入力してください'); return; }
-      tollBase = km > 40 ? Math.round(km * 20) : 0;
+      const est = estimateRoute(o, d);
+      if (est) {
+        km = est.km; tollBase = est.toll; isEstimate = true;
+      } else {
+        km = parseInt(document.getElementById('manualKm').value);
+        if (!km || km < 1) { alert('距離を入力してください'); return; }
+        tollBase = km > 40 ? Math.round(km * 20) : 0;
+      }
     }
+  } else {
+    // 時間制：距離は任意入力（空白=0km＝距離超過なし）
+    const manKm = parseInt(document.getElementById('timeKm').value);
+    km = manKm > 0 ? manKm : 0;
   }
 
   const useHighway = hwyMode === 'yes' ? true : hwyMode === 'no' ? false : km >= 40;
@@ -628,7 +651,9 @@ function calculate() {
   document.getElementById('rSub').textContent = isEstimate
     ? '※距離は推定値です。実走距離で金額が確定します。'
     : (toll > 0 ? '（高速代±数百円の変動あり）' : '');
-  document.getElementById('rRoute').textContent = `${o} → ${d}`;
+  document.getElementById('rRoute').textContent = fareType === 'time'
+    ? `時間制 ${hours}時間貸切`
+    : `${o} → ${d}`;
   document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
   document.getElementById('rBase').textContent = fareType === 'time'
     ? `¥${base.toLocaleString()}（${hours}時間・${km}km）`
