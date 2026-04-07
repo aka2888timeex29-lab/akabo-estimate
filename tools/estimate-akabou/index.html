@@ -272,6 +272,11 @@
     <label>距離を手入力（km）※Googleマップで確認</label>
     <input type="number" id="manualKm" placeholder="例: 45" min="1" max="2000">
   </div>
+
+  <div style="margin-top:14px; padding-top:14px; border-top:1.5px dashed var(--border);">
+    <label>📏 距離だけで計算（出発地・目的地の選択不要）</label>
+    <input type="number" id="directKm" placeholder="例: 45（km）" min="1" max="2000">
+  </div>
 </div>
 
 <!-- オプション -->
@@ -565,22 +570,31 @@ function calculate() {
   const d = document.getElementById('destination').value;
   const hours = parseFloat(document.getElementById('hoursSelect').value) || 2;
 
-  let km = 0, tollBase = 0, isEstimate = false;
+  let km = 0, tollBase = 0, isEstimate = false, isDirect = false;
+  const directKmVal = parseInt(document.getElementById('directKm').value);
   if (fareType === 'distance') {
-    if (!o || !d) { alert('出発地と目的地を選択してください'); return; }
-    if (o === d)  { alert('出発地と目的地が同じです'); return; }
-    const key = getKey(o, d);
-    if (key) {
-      km = ROUTES[key].km;
-      tollBase = ROUTES[key].toll;
+    if (directKmVal && directKmVal > 0) {
+      km = directKmVal;
+      tollBase = km > 40 ? Math.round(km * 20) : 0;
+      isDirect = true;
+    } else if (!o || !d) {
+      alert('出発地と目的地を選択するか、下の距離欄に数値を入力してください');
+      return;
     } else {
-      const est = estimateRoute(o, d);
-      if (est) {
-        km = est.km; tollBase = est.toll; isEstimate = true;
+      if (o === d) { alert('出発地と目的地が同じです'); return; }
+      const key = getKey(o, d);
+      if (key) {
+        km = ROUTES[key].km;
+        tollBase = ROUTES[key].toll;
       } else {
-        km = parseInt(document.getElementById('manualKm').value);
-        if (!km || km < 1) { alert('距離を入力してください'); return; }
-        tollBase = km > 40 ? Math.round(km * 20) : 0;
+        const est = estimateRoute(o, d);
+        if (est) {
+          km = est.km; tollBase = est.toll; isEstimate = true;
+        } else {
+          km = parseInt(document.getElementById('manualKm').value);
+          if (!km || km < 1) { alert('距離を入力してください'); return; }
+          tollBase = km > 40 ? Math.round(km * 20) : 0;
+        }
       }
     }
   } else {
@@ -633,7 +647,7 @@ function calculate() {
 
   document.getElementById('rRoute').textContent = fareType === 'time'
     ? `時間制 ${hours}時間貸切`
-    : `${o} → ${d}`;
+    : isDirect ? `距離指定 ${km}km` : `${o} → ${d}`;
   document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
   document.getElementById('rBase').textContent = fareType === 'time'
     ? `¥${base.toLocaleString()}（${hours}時間・${km}km）`
@@ -646,7 +660,7 @@ function calculate() {
   document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
 
   window._est = { o, d, km, base, baseExTax, taxAmt, toll, tokyoExtra, total,
-    time: calcTime(km, useHighway), fareType, hours };
+    time: calcTime(km, useHighway), fareType, hours, isDirect };
 }
 
 function copyText() {
@@ -661,7 +675,7 @@ function copyText() {
       '━━━━━━━━━━━━',
       e.fareType === 'time'
         ? `時間制貸切：${e.hours}時間・${e.km}km`
-        : `ルート：${e.o} → ${e.d}（${e.km}km）`,
+        : e.isDirect ? `距離：${e.km}km` : `ルート：${e.o} → ${e.d}（${e.km}km）`,
       '━━━━━━━━━━━━',
       `運賃（税別）：¥${e.baseExTax.toLocaleString()}`,
       `消費税（10%）：¥${e.taxAmt.toLocaleString()}`,
@@ -681,7 +695,7 @@ function copyText() {
       '━━━━━━━━━━━━',
       e.fareType === 'time'
         ? `時間制貸切：${e.hours}時間・${e.km}km`
-        : `ルート：${e.o} → ${e.d}（${e.km}km）`,
+        : e.isDirect ? `距離：${e.km}km` : `ルート：${e.o} → ${e.d}（${e.km}km）`,
       '━━━━━━━━━━━━',
       `合計：¥${e.total.toLocaleString()}（税込）`,
       `所要時間：${e.time}`,
