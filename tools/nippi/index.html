@@ -55,16 +55,16 @@
       top: 0;
       z-index: 100;
     }
-    .header-logos {
+    .header-inner {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      margin-bottom: 4px;
+      gap: 12px;
     }
-    .header-logos img.logo-mark { height: 44px; width: auto; }
-    .header-logos img.logo-text { height: 26px; width: auto; filter: brightness(0) invert(1); }
-    .header .date { font-size: 12px; opacity: 0.88; }
+    .header-inner img.logo-mark { height: 52px; width: auto; }
+    .header-title h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-align: left; }
+    .header-title .subtitle { font-size: 11px; opacity: 0.88; letter-spacing: 0.06em; text-align: left; margin-top: 2px; }
+    .header .date { font-size: 11.5px; opacity: 0.85; margin-top: 6px; }
 
     /* タブナビ */
     .tab-nav {
@@ -468,11 +468,14 @@
 
 <!-- ヘッダー -->
 <div class="header">
-  <div class="header-logos">
+  <div class="header-inner">
     <img src="logo1.png" alt="あかぼうくん" class="logo-mark">
-    <img src="logo2.png" alt="赤帽タイム便" class="logo-text">
+    <div class="header-title">
+      <h1>赤帽タイム便</h1>
+      <div class="subtitle">🚛 運行管理システム</div>
+    </div>
   </div>
-  <div class="date" id="headerDate">運行管理</div>
+  <div class="date" id="headerDate"></div>
 </div>
 
 <!-- タブナビ -->
