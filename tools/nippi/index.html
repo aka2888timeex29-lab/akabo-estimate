@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="運行日報">
+  <meta name="theme-color" content="#1B5E20">
+  <title>赤帽タイム便 運行管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:      #2E7D32;
+      --primary-soft: #43A047;
+      --primary-pale: #E8F5E9;
+      --primary-glow: rgba(46,125,50,0.15);
+      --bg:           #F1F8F1;
+      --card-bg:      #FFFFFF;
+      --border:       #C8E6C9;
+      --text:         #1A2E1A;
+      --text-mid:     #4A6741;
+      --text-light:   #90A890;
+      --shadow:       rgba(46,125,50,0.08);
+      --red:          #C62828;
+      --red-pale:     #FFEBEE;
+      --orange:       #E65100;
+      --orange-pale:  #FFF3E0;
+      --blue:         #1565C0;
+      --blue-pale:    #E3F2FD;
+      --green:        #2E7D32;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; }
+    input, select, button, textarea { -webkit-appearance: none; font-size: 16px; font-family: inherit; }
+    body {
+      font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 80px;
+    }
+
+    /* ヘッダー */
+    .header {
+      background: linear-gradient(135deg, #1B5E20 0%, #43A047 100%);
+      color: white;
+      padding: 18px 16px 14px;
+      text-align: center;
+      box-shadow: 0 2px 10px var(--primary-glow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header h1 { font-size: 17px; font-weight: 700; }
+    .header .date { font-size: 12px; opacity: 0.88; margin-top: 3px; }
+
+    /* タブナビ */
+    .tab-nav {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 62px;
+      z-index: 99;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 4px;
+      border: none;
+      background: white;
+      color: var(--text-mid);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all .18s;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* コンテンツ */
+    .tab-content { display: none; padding: 14px; }
+    .tab-content.active { display: block; }
+
+    /* カード */
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card h2 {
+      font-size: 13px;
+      color: var(--text-mid);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid var(--border);
+      font-weight: 700;
+    }
+
+    /* 点検ボタン */
+    .inspection-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      color: var(--text-mid);
+    }
+    .inspection-btn.done {
+      background: var(--primary-pale);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* 案件カード */
+    .trip-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px var(--shadow);
+      border: 1.5px solid var(--border);
+    }
+    .trip-card.in-progress { border-color: var(--orange); background: var(--orange-pale); }
+    .trip-card.completed   { border-color: var(--primary); background: var(--primary-pale); }
+
+    .trip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .trip-client { font-size: 14px; font-weight: 700; }
+    .trip-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: #eee;
+      color: #666;
+    }
+    .trip-status.in-progress { background: var(--orange); color: white; }
+    .trip-status.completed   { background: var(--primary); color: white; }
+
+    .trip-route {
+      font-size: 12.5px;
+      color: var(--text-mid);
+      margin-bottom: 10px;
+    }
+    .trip-times {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .time-box {
+      background: #f8f8f8;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 11.5px;
+    }
+    .time-box .label { color: var(--text-light); font-size: 10.5px; margin-bottom: 3px; }
+    .time-box .value { font-weight: 700; font-size: 14px; color: var(--text); }
+    .time-box .odo   { font-size: 11px; color: var(--text-mid); margin-top: 2px; }
+
+    .trip-calc {
+      display: flex;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-mid);
+      margin-bottom: 10px;
+    }
+    .trip-calc span { background: var(--primary-pale); padding: 3px 8px; border-radius: 6px; color: var(--primary); font-weight: 700; }
+
+    .trip-actions { display: flex; gap: 8px; }
+    .btn-start {
+      flex: 1; padding: 10px; border: none; border-radius: 10px;
+      background: var(--orange); color: white; font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+    .btn-end {
+      flex: 1; padding: 10px; border: none; border-radius: 10px;
+      background: var(--primary); color: white; font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+    .btn-edit {
+      padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      background: white; color: var(--text-mid); font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+    .btn-delete {
+      padding: 10px 14px; border: 1.5px solid #ffcdd2; border-radius: 10px;
+      background: white; color: var(--red); font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+
+    /* 追加ボタン */
+    .add-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* モーダル */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      overflow-y: auto;
+      padding: 20px 14px;
+    }
+    .modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+    .modal {
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      width: 100%;
+      max-width: 480px;
+      margin: auto;
+    }
+    .modal h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1.5px solid var(--border);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-mid);
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text);
+      background: white;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .time-input-group { display: flex; gap: 8px; align-items: flex-end; }
+    .time-input-group input { flex: 1; }
+    .now-btn {
+      padding: 11px 12px;
+      background: var(--primary-pale);
+      border: 1.5px solid var(--primary);
+      border-radius: 10px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-cancel {
+      flex: 1; padding: 13px; border: 1.5px solid var(--border);
+      border-radius: 12px; background: white; color: var(--text-mid);
+      font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .btn-save {
+      flex: 2; padding: 13px; border: none;
+      border-radius: 12px; background: var(--primary); color: white;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+
+    /* 書類管理 */
+    .doc-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px var(--shadow);
+      border: 1.5px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .doc-card.alert-red   { border-color: var(--red);    background: var(--red-pale); }
+    .doc-card.alert-orange{ border-color: var(--orange); background: var(--orange-pale); }
+
+    .doc-photo {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .doc-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .doc-expiry { font-size: 12px; color: var(--text-mid); }
+    .doc-days {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .doc-days.safe   { background: var(--primary-pale); color: var(--primary); }
+    .doc-days.warn   { background: var(--orange-pale);  color: var(--orange); }
+    .doc-days.danger { background: var(--red-pale);     color: var(--red); }
+    .doc-days.expired{ background: #f5f5f5; color: #999; }
+
+    .doc-edit-btn {
+      padding: 6px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      color: var(--text-mid);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* 写真拡大モーダル */
+    .photo-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-modal-overlay.open { display: flex; }
+    .photo-modal-overlay img {
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 12px;
+    }
+    .photo-modal-close {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 履歴 */
+    .month-selector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--border);
+    }
+    .month-nav {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--primary);
+      padding: 4px 8px;
+    }
+    .month-label { font-size: 15px; font-weight: 700; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .summary-box {
+      background: white;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      border: 1.5px solid var(--border);
+    }
+    .summary-box .s-label { font-size: 11px; color: var(--text-mid); font-weight: 700; margin-bottom: 4px; }
+    .summary-box .s-value { font-size: 22px; font-weight: 700; color: var(--primary); }
+    .summary-box .s-unit  { font-size: 11px; color: var(--text-mid); }
+
+    .history-item {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-item .h-left .h-client { font-size: 13px; font-weight: 700; }
+    .history-item .h-left .h-route  { font-size: 11.5px; color: var(--text-mid); }
+    .history-item .h-right { text-align: right; }
+    .history-item .h-right .h-km    { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .history-item .h-right .h-time  { font-size: 11px; color: var(--text-mid); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+    .empty-state .emoji { font-size: 40px; margin-bottom: 10px; }
+    .empty-state p { font-size: 13px; }
+
+    /* 隠しファイル入力 */
+    .hidden-input { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <h1>🚛 赤帽タイム便 運行管理</h1>
+  <div class="date" id="headerDate"></div>
+</div>
+
+<!-- タブナビ -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('today')">🚗 今日の運行</button>
+  <button class="tab-btn" onclick="switchTab('docs')">📄 書類管理</button>
+  <button class="tab-btn" onclick="switchTab('history')">📊 履歴</button>
+</div>
+
+<!-- ===== 今日の運行 ===== -->
+<div id="tab-today" class="tab-content active">
+
+  <!-- 日常点検 -->
+  <div class="card">
+    <h2>🔍 日常点検（出発前）</h2>
+    <button class="inspection-btn" id="inspectionBtn" onclick="toggleInspection()">
+      ✅ 点検完了にする
+    </button>
+  </div>
+
+  <!-- 案件リスト -->
+  <div id="tripList"></div>
+
+  <!-- 案件追加 -->
+  <button class="add-btn" onclick="openTripModal()">＋ 案件を追加</button>
+
+</div>
+
+<!-- ===== 書類管理 ===== -->
+<div id="tab-docs" class="tab-content">
+
+  <div id="docAlerts"></div>
+  <div id="docList"></div>
+  <button class="add-btn" onclick="openDocModal()">＋ 書類を追加</button>
+
+</div>
+
+<!-- ===== 履歴 ===== -->
+<div id="tab-history" class="tab-content">
+
+  <div class="month-selector">
+    <button class="month-nav" onclick="changeMonth(-1)">‹</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button class="month-nav" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-box">
+      <div class="s-label">案件数</div>
+      <div class="s-value" id="sumTrips">0</div>
+      <div class="s-unit">件</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">走行距離</div>
+      <div class="s-value" id="sumKm">0</div>
+      <div class="s-unit">km</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">高速代合計</div>
+      <div class="s-value" id="sumToll">0</div>
+      <div class="s-unit">円</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">給油合計</div>
+      <div class="s-value" id="sumFuel">0</div>
+      <div class="s-unit">円</div>
+    </div>
+  </div>
+
+  <div id="historyList"></div>
+
+</div>
+
+<!-- ===== 案件モーダル ===== -->
+<div class="modal-overlay" id="tripModal">
+  <div class="modal">
+    <h3 id="tripModalTitle">📋 案件を追加</h3>
+
+    <div class="form-group">
+      <label>顧客名 / 案件名</label>
+      <input type="text" id="f_client" placeholder="例：山田商店 引越し">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>出発地</label>
+        <input type="text" id="f_from" placeholder="例：山形市">
+      </div>
+      <div class="form-group">
+        <label>目的地</label>
+        <input type="text" id="f_to" placeholder="例：仙台市">
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">🚦 出発記録</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>出発時刻</label>
+          <div class="time-input-group">
+            <input type="time" id="f_startTime">
+            <button class="now-btn" onclick="setNow('f_startTime')">今</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ODOメーター（出発）</label>
+          <input type="number" id="f_startOdo" placeholder="例：12345">
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">🏁 到着記録</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>到着時刻</label>
+          <div class="time-input-group">
+            <input type="time" id="f_endTime">
+            <button class="now-btn" onclick="setNow('f_endTime')">今</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ODOメーター（到着）</label>
+          <input type="number" id="f_endOdo" placeholder="例：12398">
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">💴 経費（任意）</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>高速代（円）</label>
+          <input type="number" id="f_toll" placeholder="例：2200">
+        </div>
+        <div class="form-group">
+          <label>給油金額（円）</label>
+          <input type="number" id="f_fuel" placeholder="例：3000">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>メモ（任意）</label>
+      <textarea id="f_memo" rows="2" placeholder="特記事項・ヒヤリハット等" style="resize:none;"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTripModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveTrip()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 書類モーダル ===== -->
+<div class="modal-overlay" id="docModal">
+  <div class="modal">
+    <h3 id="docModalTitle">📄 書類を追加</h3>
+
+    <div class="form-group">
+      <label>書類の種類</label>
+      <select id="d_type">
+        <option value="shakken">車検証</option>
+        <option value="jibai">自賠責保険</option>
+        <option value="ninni">任意保険</option>
+        <option value="kamotsu">貨物保険</option>
+        <option value="menkyo">免許証</option>
+        <option value="seibiki">定期整備記録簿</option>
+        <option value="other">その他</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>書類名（任意・カスタム名）</label>
+      <input type="text" id="d_name" placeholder="例：令和7年度 任意保険">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>有効期限</label>
+        <input type="date" id="d_expiry">
+      </div>
+      <div class="form-group">
+        <label>アラート（期限○日前）</label>
+        <select id="d_alertDays">
+          <option value="14">14日前</option>
+          <option value="30" selected>30日前</option>
+          <option value="60">60日前</option>
+          <option value="90">90日前</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>📸 写真（タップして撮影 or 選択）</label>
+      <div id="d_photoPreview" onclick="document.getElementById('d_photoInput').click()"
+        style="width:100%; height:120px; border:2px dashed var(--border); border-radius:12px;
+               display:flex; align-items:center; justify-content:center; cursor:pointer;
+               background:#fafafa; overflow:hidden; position:relative;">
+        <span id="d_photoPlaceholder" style="font-size:13px; color:var(--text-light);">📷 タップして写真を追加</span>
+        <img id="d_photoImg" style="display:none; width:100%; height:100%; object-fit:cover;">
+      </div>
+      <input type="file" id="d_photoInput" accept="image/*" capture="environment"
+             class="hidden-input" onchange="previewPhoto(this)">
+    </div>
+
+    <div class="form-group">
+      <label>メモ（任意）</label>
+      <input type="text" id="d_memo" placeholder="例：証券番号 AB-12345">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDocModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveDoc()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 写真拡大モーダル -->
+<div class="photo-modal-overlay" id="photoModal" onclick="closePhotoModal()">
+  <button class="photo-modal-close" onclick="closePhotoModal()">✕</button>
+  <img id="photoModalImg" src="" alt="書類写真">
+</div>
+
+<!-- 隠しファイル入力（写真更新用） -->
+<input type="file" id="updatePhotoInput" accept="image/*" capture="environment"
+       class="hidden-input" onchange="updateDocPhoto(this)">
+
+<script>
+// ===== データ管理 =====
+const STORAGE_KEY = 'akaboTimeNippi_v1';
+let data = { trips: [], docs: [], inspections: {} };
+
+function loadData() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) data = JSON.parse(saved);
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ===== 日付ユーティリティ =====
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+function formatDate(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr) - new Date(today());
+  return Math.ceil(diff / 86400000);
+}
+function calcDuration(start, end) {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) return null;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? `${h}時間${m > 0 ? m+'分' : ''}` : `${m}分`;
+}
+function nowTime() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+
+// ===== ヘッダー日付 =====
+function updateHeaderDate() {
+  const n = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('headerDate').textContent =
+    `${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日（${days[n.getDay()]}）`;
+}
+
+// ===== タブ切替 =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'history') renderHistory();
+  if (tab === 'docs') renderDocs();
+}
+
+// ===== 日常点検 =====
+function toggleInspection() {
+  const t = today();
+  data.inspections[t] = !data.inspections[t];
+  saveData();
+  renderInspection();
+}
+function renderInspection() {
+  const t = today();
+  const done = data.inspections[t];
+  const btn = document.getElementById('inspectionBtn');
+  if (done) {
+    btn.textContent = '✅ 日常点検完了（タップで取消）';
+    btn.classList.add('done');
+  } else {
+    btn.textContent = '⬜ 日常点検を完了にする';
+    btn.classList.remove('done');
+  }
+}
+
+// ===== 案件管理 =====
+let editingTripId = null;
+
+function openTripModal(id) {
+  editingTripId = id || null;
+  const modal = document.getElementById('tripModal');
+  if (id) {
+    const t = data.trips.find(t => t.id === id);
+    document.getElementById('tripModalTitle').textContent = '✏️ 案件を編集';
+    document.getElementById('f_client').value    = t.client || '';
+    document.getElementById('f_from').value      = t.from || '';
+    document.getElementById('f_to').value        = t.to || '';
+    document.getElementById('f_startTime').value = t.startTime || '';
+    document.getElementById('f_startOdo').value  = t.startOdo || '';
+    document.getElementById('f_endTime').value   = t.endTime || '';
+    document.getElementById('f_endOdo').value    = t.endOdo || '';
+    document.getElementById('f_toll').value      = t.toll || '';
+    document.getElementById('f_fuel').value      = t.fuel || '';
+    document.getElementById('f_memo').value      = t.memo || '';
+  } else {
+    document.getElementById('tripModalTitle').textContent = '📋 案件を追加';
+    ['f_client','f_from','f_to','f_startTime','f_startOdo',
+     'f_endTime','f_endOdo','f_toll','f_fuel','f_memo']
+      .forEach(id => document.getElementById(id).value = '');
+  }
+  modal.classList.add('open');
+}
+function closeTripModal() {
+  document.getElementById('tripModal').classList.remove('open');
+  editingTripId = null;
+}
+function saveTrip() {
+  const client    = document.getElementById('f_client').value.trim();
+  const from      = document.getElementById('f_from').value.trim();
+  const to        = document.getElementById('f_to').value.trim();
+  const startTime = document.getElementById('f_startTime').value;
+  const startOdo  = parseInt(document.getElementById('f_startOdo').value) || null;
+  const endTime   = document.getElementById('f_endTime').value;
+  const endOdo    = parseInt(document.getElementById('f_endOdo').value) || null;
+  const toll      = parseInt(document.getElementById('f_toll').value) || null;
+  const fuel      = parseInt(document.getElementById('f_fuel').value) || null;
+  const memo      = document.getElementById('f_memo').value.trim();
+
+  if (!client) { alert('顧客名・案件名を入力してください'); return; }
+
+  let status = 'planned';
+  if (startTime && startOdo && endTime && endOdo) status = 'completed';
+  else if (startTime && startOdo) status = 'in-progress';
+
+  if (editingTripId) {
+    const idx = data.trips.findIndex(t => t.id === editingTripId);
+    data.trips[idx] = { ...data.trips[idx], client, from, to, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status };
+  } else {
+    data.trips.push({ id: Date.now(), date: today(), client, from, to, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status });
+  }
+  saveData();
+  closeTripModal();
+  renderTrips();
+}
+function deleteTrip(id) {
+  if (!confirm('この案件を削除しますか？')) return;
+  data.trips = data.trips.filter(t => t.id !== id);
+  saveData();
+  renderTrips();
+}
+function startTrip(id) {
+  const t = data.trips.find(t => t.id === id);
+  const odo = prompt('出発ODOメーターを入力してください（km）');
+  if (!odo) return;
+  t.startTime = nowTime();
+  t.startOdo  = parseInt(odo);
+  t.status    = 'in-progress';
+  saveData();
+  renderTrips();
+}
+function endTrip(id) {
+  const t = data.trips.find(t => t.id === id);
+  const odo = prompt('到着ODOメーターを入力してください（km）');
+  if (!odo) return;
+  t.endTime = nowTime();
+  t.endOdo  = parseInt(odo);
+  t.status  = 'completed';
+  saveData();
+  renderTrips();
+}
+
+function renderTrips() {
+  const t = today();
+  const trips = data.trips.filter(t2 => t2.date === t);
+  const el = document.getElementById('tripList');
+
+  if (trips.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">🚛</div><p>今日の案件はまだありません<br>下のボタンから追加してください</p></div>`;
+    return;
+  }
+
+  el.innerHTML = trips.map(t => {
+    const km = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : null;
+    const dur = calcDuration(t.startTime, t.endTime);
+    const statusLabel = { planned: '予定', 'in-progress': '運行中', completed: '完了' }[t.status];
+
+    return `
+    <div class="trip-card ${t.status}">
+      <div class="trip-header">
+        <div class="trip-client">${t.client || '（案件名なし）'}</div>
+        <div class="trip-status ${t.status}">${statusLabel}</div>
+      </div>
+      ${(t.from || t.to) ? `<div class="trip-route">📍 ${t.from || '?'} → ${t.to || '?'}</div>` : ''}
+      <div class="trip-times">
+        <div class="time-box">
+          <div class="label">🚦 出発</div>
+          <div class="value">${t.startTime || '--:--'}</div>
+          ${t.startOdo ? `<div class="odo">ODO: ${t.startOdo.toLocaleString()}km</div>` : ''}
+        </div>
+        <div class="time-box">
+          <div class="label">🏁 到着</div>
+          <div class="value">${t.endTime || '--:--'}</div>
+          ${t.endOdo ? `<div class="odo">ODO: ${t.endOdo.toLocaleString()}km</div>` : ''}
+        </div>
+      </div>
+      ${(km || dur) ? `<div class="trip-calc">
+        ${km ? `<span>🛣 ${km}</span>` : ''}
+        ${dur ? `<span>⏱ ${dur}</span>` : ''}
+        ${t.toll ? `<span>🛣 高速 ¥${t.toll.toLocaleString()}</span>` : ''}
+      </div>` : ''}
+      <div class="trip-actions">
+        ${t.status === 'planned'     ? `<button class="btn-start" onclick="startTrip(${t.id})">🚦 出発記録</button>` : ''}
+        ${t.status === 'in-progress' ? `<button class="btn-end" onclick="endTrip(${t.id})">🏁 到着記録</button>` : ''}
+        <button class="btn-edit" onclick="openTripModal(${t.id})">✏️</button>
+        <button class="btn-delete" onclick="deleteTrip(${t.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 書類管理 =====
+let editingDocId = null;
+let updatingDocId = null;
+
+function openDocModal(id) {
+  editingDocId = id || null;
+  const modal = document.getElementById('docModal');
+  if (id) {
+    const d = data.docs.find(d => d.id === id);
+    document.getElementById('docModalTitle').textContent = '✏️ 書類を編集';
+    document.getElementById('d_type').value      = d.type || 'shakken';
+    document.getElementById('d_name').value      = d.name || '';
+    document.getElementById('d_expiry').value    = d.expiry || '';
+    document.getElementById('d_alertDays').value = d.alertDays || '30';
+    document.getElementById('d_memo').value      = d.memo || '';
+    if (d.photo) {
+      document.getElementById('d_photoImg').src = d.photo;
+      document.getElementById('d_photoImg').style.display = 'block';
+      document.getElementById('d_photoPlaceholder').style.display = 'none';
+    } else {
+      document.getElementById('d_photoImg').style.display = 'none';
+      document.getElementById('d_photoPlaceholder').style.display = '';
+    }
+  } else {
+    document.getElementById('docModalTitle').textContent = '📄 書類を追加';
+    document.getElementById('d_type').value      = 'shakken';
+    document.getElementById('d_name').value      = '';
+    document.getElementById('d_expiry').value    = '';
+    document.getElementById('d_alertDays').value = '30';
+    document.getElementById('d_memo').value      = '';
+    document.getElementById('d_photoImg').style.display = 'none';
+    document.getElementById('d_photoPlaceholder').style.display = '';
+    document.getElementById('d_photoImg').src = '';
+  }
+  modal.classList.add('open');
+}
+function closeDocModal() {
+  document.getElementById('docModal').classList.remove('open');
+  editingDocId = null;
+}
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('d_photoImg').src = e.target.result;
+    document.getElementById('d_photoImg').style.display = 'block';
+    document.getElementById('d_photoPlaceholder').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+function saveDoc() {
+  const type      = document.getElementById('d_type').value;
+  const name      = document.getElementById('d_name').value.trim();
+  const expiry    = document.getElementById('d_expiry').value;
+  const alertDays = parseInt(document.getElementById('d_alertDays').value);
+  const memo      = document.getElementById('d_memo').value.trim();
+  const photo     = document.getElementById('d_photoImg').src || null;
+  const typeNames = { shakken:'車検証', jibai:'自賠責保険', ninni:'任意保険',
+                      kamotsu:'貨物保険', menkyo:'免許証', seibiki:'定期整備記録簿', other:'その他' };
+  const displayName = name || typeNames[type] || '書類';
+
+  if (!expiry) { alert('有効期限を入力してください'); return; }
+
+  if (editingDocId) {
+    const idx = data.docs.findIndex(d => d.id === editingDocId);
+    const oldPhoto = data.docs[idx].photo;
+    data.docs[idx] = { ...data.docs[idx], type, name: displayName, expiry, alertDays, memo,
+      photo: (document.getElementById('d_photoImg').style.display !== 'none' && document.getElementById('d_photoImg').src) ? document.getElementById('d_photoImg').src : oldPhoto };
+  } else {
+    const photoSrc = document.getElementById('d_photoImg').style.display !== 'none' ? document.getElementById('d_photoImg').src : null;
+    data.docs.push({ id: Date.now(), type, name: displayName, expiry, alertDays, memo, photo: photoSrc });
+  }
+  saveData();
+  closeDocModal();
+  renderDocs();
+}
+function deleteDoc(id) {
+  if (!confirm('この書類を削除しますか？')) return;
+  data.docs = data.docs.filter(d => d.id !== id);
+  saveData();
+  renderDocs();
+}
+function openPhotoModal(src) {
+  document.getElementById('photoModalImg').src = src;
+  document.getElementById('photoModal').classList.add('open');
+}
+function closePhotoModal() {
+  document.getElementById('photoModal').classList.remove('open');
+}
+function triggerPhotoUpdate(id) {
+  updatingDocId = id;
+  document.getElementById('updatePhotoInput').click();
+}
+function updateDocPhoto(input) {
+  const file = input.files[0];
+  if (!file || !updatingDocId) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const doc = data.docs.find(d => d.id === updatingDocId);
+    if (doc) { doc.photo = e.target.result; saveData(); renderDocs(); }
+    updatingDocId = null;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderDocs() {
+  const sortedDocs = [...data.docs].sort((a, b) => {
+    const da = daysUntil(a.expiry), db = daysUntil(b.expiry);
+    return (da ?? 9999) - (db ?? 9999);
+  });
+
+  // アラートバナー
+  const alerts = sortedDocs.filter(d => {
+    const days = daysUntil(d.expiry);
+    return days !== null && days <= d.alertDays && days >= 0;
+  });
+  const alertEl = document.getElementById('docAlerts');
+  alertEl.innerHTML = alerts.length > 0 ? alerts.map(d => {
+    const days = daysUntil(d.expiry);
+    return `<div class="card" style="border-color:${days <= 14 ? 'var(--red)' : 'var(--orange)'}; background:${days <= 14 ? 'var(--red-pale)' : 'var(--orange-pale)'}; margin-bottom:10px;">
+      ⚠️ <b>${d.name}</b> の有効期限まで残り <b>${days}日</b> です（${formatDate(d.expiry)}）
+    </div>`;
+  }).join('') : '';
+
+  // 書類リスト
+  const el = document.getElementById('docList');
+  if (sortedDocs.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">📄</div><p>書類がまだ登録されていません<br>下のボタンから追加してください</p></div>`;
+    return;
+  }
+  el.innerHTML = sortedDocs.map(d => {
+    const days = daysUntil(d.expiry);
+    let alertClass = '', daysClass = 'safe', daysText = '';
+    if (days === null) { daysText = '期限なし'; daysClass = 'expired'; }
+    else if (days < 0)  { daysText = '期限切れ'; daysClass = 'expired'; alertClass = 'alert-red'; }
+    else if (days <= 14){ daysText = `残り${days}日！`; daysClass = 'danger'; alertClass = 'alert-red'; }
+    else if (days <= d.alertDays){ daysText = `残り${days}日`; daysClass = 'warn'; alertClass = 'alert-orange'; }
+    else { daysText = `残り${days}日`; daysClass = 'safe'; }
+
+    const photoHtml = d.photo
+      ? `<div class="doc-photo" onclick="openPhotoModal('${d.photo}')"><img src="${d.photo}" alt="書類写真"></div>`
+      : `<div class="doc-photo" onclick="triggerPhotoUpdate(${d.id})">📷</div>`;
+
+    return `
+    <div class="doc-card ${alertClass}">
+      ${photoHtml}
+      <div class="doc-info">
+        <div class="doc-name">${d.name}</div>
+        <div class="doc-expiry">有効期限：${formatDate(d.expiry)}</div>
+        ${d.memo ? `<div style="font-size:11px; color:var(--text-mid);">${d.memo}</div>` : ''}
+        <div class="doc-days ${daysClass}">${daysText}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="doc-edit-btn" onclick="openDocModal(${d.id})">✏️ 編集</button>
+        <button class="doc-edit-btn" style="color:var(--red); border-color:#ffcdd2;" onclick="deleteDoc(${d.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 履歴 =====
+let historyMonth = new Date();
+
+function changeMonth(d) {
+  historyMonth.setMonth(historyMonth.getMonth() + d);
+  renderHistory();
+}
+function renderHistory() {
+  const y = historyMonth.getFullYear(), m = historyMonth.getMonth() + 1;
+  document.getElementById('monthLabel').textContent = `${y}年${m}月`;
+
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr) && t.status === 'completed');
+
+  const totalKm   = trips.reduce((s, t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const totalToll = trips.reduce((s, t) => s + (t.toll || 0), 0);
+  const totalFuel = trips.reduce((s, t) => s + (t.fuel || 0), 0);
+
+  document.getElementById('sumTrips').textContent = trips.length;
+  document.getElementById('sumKm').textContent    = totalKm.toLocaleString();
+  document.getElementById('sumToll').textContent  = totalToll.toLocaleString();
+  document.getElementById('sumFuel').textContent  = totalFuel.toLocaleString();
+
+  const el = document.getElementById('historyList');
+  if (trips.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">📊</div><p>この月の完了案件はありません</p></div>`;
+    return;
+  }
+  el.innerHTML = [...trips].reverse().map(t => {
+    const km  = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : '-';
+    const dur = calcDuration(t.startTime, t.endTime) || '-';
+    return `
+    <div class="history-item">
+      <div class="h-left">
+        <div class="h-client">${t.client}</div>
+        <div class="h-route">${t.date} ${(t.from||t.to) ? `／ ${t.from||'?'} → ${t.to||'?'}` : ''}</div>
+      </div>
+      <div class="h-right">
+        <div class="h-km">🛣 ${km}</div>
+        <div class="h-time">⏱ ${dur}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== Now ボタン =====
+function setNow(fieldId) {
+  document.getElementById(fieldId).value = nowTime();
+}
+
+// ===== 初期化 =====
+loadData();
+updateHeaderDate();
+renderInspection();
+renderTrips();
+renderDocs();
+historyMonth = new Date();
+renderHistory();
+</script>
+</body>
+</html>
