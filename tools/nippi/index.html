@@ -507,6 +507,26 @@
 <!-- ===== 書類管理 ===== -->
 <div id="tab-docs" class="tab-content">
 
+  <!-- 事業者情報 -->
+  <div class="card">
+    <h2>📋 事業者情報</h2>
+    <div class="form-group">
+      <label>経営届出番号（貨物軽自動車運送事業）</label>
+      <input type="text" id="biz_delivery" placeholder="例：山形000号"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>インボイス登録番号</label>
+      <input type="text" id="biz_invoice" placeholder="例：T1234567890123"
+        oninput="saveBizInfo()" maxlength="14" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>赤帽組合員番号</label>
+      <input type="text" id="biz_kumiai" placeholder="例：山形-000"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+  </div>
+
   <div id="docAlerts"></div>
   <div id="docList"></div>
   <button class="add-btn" onclick="openDocModal()">＋ 書類を追加</button>
@@ -1126,12 +1146,29 @@ function setNow(fieldId) {
   document.getElementById(fieldId).value = nowTime();
 }
 
+// ===== 事業者情報 =====
+function saveBizInfo() {
+  data.bizInfo = {
+    delivery: document.getElementById('biz_delivery').value,
+    invoice:  document.getElementById('biz_invoice').value,
+    kumiai:   document.getElementById('biz_kumiai').value,
+  };
+  saveData();
+}
+function loadBizInfo() {
+  if (!data.bizInfo) return;
+  document.getElementById('biz_delivery').value = data.bizInfo.delivery || '';
+  document.getElementById('biz_invoice').value  = data.bizInfo.invoice  || '';
+  document.getElementById('biz_kumiai').value   = data.bizInfo.kumiai   || '';
+}
+
 // ===== 初期化 =====
 loadData();
 updateHeaderDate();
 renderInspection();
 renderTrips();
 renderDocs();
+loadBizInfo();
 historyMonth = new Date();
 renderHistory();
 </script>
