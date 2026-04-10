@@ -477,6 +477,56 @@
 
     /* 隠しファイル入力 */
     .hidden-input { display: none; }
+
+    /* カレンダー同期バー */
+    .cal-sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--blue-pale);
+      border-bottom: 1.5px solid #BBDEFB;
+    }
+    .cal-sync-btn {
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cal-sync-btn:active { opacity: 0.8; }
+    .cal-sync-btn:disabled { background: #90CAF9; cursor: not-allowed; }
+    .cal-sync-status {
+      font-size: 12px;
+      color: var(--blue);
+      flex: 1;
+    }
+    .cal-sync-status.error { color: var(--red); }
+    .cal-sync-status.success { color: #2E7D32; }
+
+    /* 仕事種別バッジ */
+    .trip-type-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .trip-type-badge.直接取引   { background: #E8F5E9; color: #2E7D32; }
+    .trip-type-badge.プラットフォーム { background: #E3F2FD; color: #1565C0; }
+    .trip-type-badge.組合員依頼 { background: #FFF3E0; color: #E65100; }
+    .trip-type-badge.MTG        { background: #F3E5F5; color: #6A1B9A; }
+    .trip-type-badge.赤帽組合   { background: #FFEBEE; color: #C62828; }
+    .trip-type-badge.cal        { background: #F1F8E9; color: #558B2F; }
   </style>
 </head>
 <body>
@@ -512,6 +562,12 @@
     <button class="inspection-btn" id="inspectionBtn" onclick="toggleInspection()">
       ✅ 点検完了にする
     </button>
+  </div>
+
+  <!-- カレンダー同期バー -->
+  <div class="cal-sync-bar">
+    <button class="cal-sync-btn" id="calSyncBtn" onclick="loadFromCalendar()">📅 カレンダーから読込</button>
+    <div id="calSyncStatus" class="cal-sync-status">Googleカレンダーの今日の案件を取得</div>
   </div>
 
   <!-- 案件リスト -->
@@ -600,6 +656,17 @@
     <div class="form-group">
       <label>顧客名 / 案件名</label>
       <input type="text" id="f_client" placeholder="例：山田商店 引越し">
+    </div>
+    <div class="form-group">
+      <label>仕事種別</label>
+      <select id="f_type">
+        <option value="">-- 未分類 --</option>
+        <option value="直接取引">直接取引</option>
+        <option value="プラットフォーム">プラットフォーム</option>
+        <option value="組合員依頼">組合員依頼</option>
+        <option value="MTG">MTG</option>
+        <option value="赤帽組合">赤帽組合</option>
+      </select>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -745,6 +812,63 @@
        class="hidden-input" onchange="updateDocPhoto(this)">
 
 <script>
+// ===== Google Apps Script URL =====
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxLpI3hsyDbchFZiqEojb6bcXnFBPHrAqziLFSYt0IOcYLSmjHNHqVMUD5AfU3NMQuK/exec';
+
+// ===== カレンダー読込 =====
+async function loadFromCalendar() {
+  const btn = document.getElementById('calSyncBtn');
+  const status = document.getElementById('calSyncStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ 読込中...';
+  status.textContent = '';
+  status.className = 'cal-sync-status';
+  try {
+    const res = await fetch(GAS_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const t = today();
+    let added = 0, skipped = 0;
+    (json.trips || []).forEach(ct => {
+      const exists = data.trips.some(
+        d => d.date === t && d.client === ct.client && d.fromCal === true
+      );
+      if (exists) { skipped++; return; }
+      data.trips.push({
+        id: Date.now() + Math.random(),
+        date: t,
+        client: ct.client,
+        from: '',
+        to: '',
+        startTime: ct.startTime || '',
+        startOdo: null,
+        endTime: ct.endTime || '',
+        endOdo: null,
+        toll: null,
+        fuel: null,
+        memo: ct.memo || '',
+        type: ct.type || '',
+        status: 'planned',
+        fromCal: true
+      });
+      added++;
+    });
+    saveData();
+    renderTrips();
+    status.textContent = added > 0
+      ? `✅ ${added}件取得${skipped > 0 ? `（${skipped}件は既存）` : ''}`
+      : skipped > 0 ? `ℹ️ 既に読込済み（${skipped}件）` : 'ℹ️ 今日の案件はカレンダーにありません';
+    status.className = 'cal-sync-status success';
+  } catch (e) {
+    status.textContent = `⚠️ 取得失敗: ${e.message}`;
+    status.className = 'cal-sync-status error';
+    console.error('Calendar fetch error:', e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📅 カレンダーから読込';
+  }
+}
+
 // ===== データ管理 =====
 const STORAGE_KEY = 'akaboTimeNippi_v1';
 let data = { trips: [], docs: [], inspections: {} };
@@ -835,6 +959,7 @@ function openTripModal(id) {
     document.getElementById('f_client').value    = t.client || '';
     document.getElementById('f_from').value      = t.from || '';
     document.getElementById('f_to').value        = t.to || '';
+    document.getElementById('f_type').value      = t.type || '';
     document.getElementById('f_startTime').value = t.startTime || '';
     document.getElementById('f_startOdo').value  = t.startOdo || '';
     document.getElementById('f_endTime').value   = t.endTime || '';
@@ -847,6 +972,7 @@ function openTripModal(id) {
     ['f_client','f_from','f_to','f_startTime','f_startOdo',
      'f_endTime','f_endOdo','f_toll','f_fuel','f_memo']
       .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f_type').value = '';
   }
   modal.classList.add('open');
 }
@@ -858,6 +984,7 @@ function saveTrip() {
   const client    = document.getElementById('f_client').value.trim();
   const from      = document.getElementById('f_from').value.trim();
   const to        = document.getElementById('f_to').value.trim();
+  const type      = document.getElementById('f_type').value;
   const startTime = document.getElementById('f_startTime').value;
   const startOdo  = parseInt(document.getElementById('f_startOdo').value) || null;
   const endTime   = document.getElementById('f_endTime').value;
@@ -874,9 +1001,9 @@ function saveTrip() {
 
   if (editingTripId) {
     const idx = data.trips.findIndex(t => t.id === editingTripId);
-    data.trips[idx] = { ...data.trips[idx], client, from, to, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status };
+    data.trips[idx] = { ...data.trips[idx], client, from, to, type, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status };
   } else {
-    data.trips.push({ id: Date.now(), date: today(), client, from, to, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status });
+    data.trips.push({ id: Date.now(), date: today(), client, from, to, type, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status });
   }
   saveData();
   closeTripModal();
@@ -927,7 +1054,11 @@ function renderTrips() {
     return `
     <div class="trip-card ${t.status}">
       <div class="trip-header">
-        <div class="trip-client">${t.client || '（案件名なし）'}</div>
+        <div class="trip-client">
+          ${t.client || '（案件名なし）'}
+          ${t.type ? `<span class="trip-type-badge ${t.type}">${t.type}</span>` : ''}
+          ${t.fromCal ? '<span class="trip-type-badge cal">📅</span>' : ''}
+        </div>
         <div class="trip-status ${t.status}">${statusLabel}</div>
       </div>
       ${(t.from || t.to) ? `<div class="trip-route">📍 ${t.from || '?'} → ${t.to || '?'}</div>` : ''}
