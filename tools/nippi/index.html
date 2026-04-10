@@ -791,15 +791,21 @@
     </div>
 
     <div class="form-group">
-      <label>📸 写真（タップして撮影 or 選択）</label>
+      <label>📎 写真 / ファイル（タップして選択）</label>
       <div id="d_photoPreview" onclick="document.getElementById('d_photoInput').click()"
-        style="width:100%; height:120px; border:2px dashed var(--border); border-radius:12px;
-               display:flex; align-items:center; justify-content:center; cursor:pointer;
-               background:#fafafa; overflow:hidden; position:relative;">
-        <span id="d_photoPlaceholder" style="font-size:13px; color:var(--text-light);">📷 タップして写真を追加</span>
-        <img id="d_photoImg" style="display:none; width:100%; height:100%; object-fit:cover;">
+        style="width:100%; min-height:90px; border:2px dashed var(--border); border-radius:12px;
+               display:flex; flex-direction:column; align-items:center; justify-content:center;
+               cursor:pointer; background:#fafafa; overflow:hidden; position:relative; padding:8px;">
+        <span id="d_photoPlaceholder" style="font-size:13px; color:var(--text-light); text-align:center;">
+          📷 写真を撮る・選ぶ<br><span style="font-size:11px;">📄 PDFなどファイルも可</span>
+        </span>
+        <img id="d_photoImg" style="display:none; width:100%; height:110px; object-fit:cover; border-radius:8px;">
+        <div id="d_fileInfo" style="display:none; text-align:center;">
+          <div style="font-size:36px;">📄</div>
+          <div id="d_fileName" style="font-size:12px; color:var(--text-mid); margin-top:4px; word-break:break-all;"></div>
+        </div>
       </div>
-      <input type="file" id="d_photoInput" accept="image/*" capture="environment"
+      <input type="file" id="d_photoInput" accept="image/*,application/pdf,.pdf"
              class="hidden-input" onchange="previewPhoto(this)">
     </div>
 
@@ -822,7 +828,7 @@
 </div>
 
 <!-- 隠しファイル入力（写真更新用） -->
-<input type="file" id="updatePhotoInput" accept="image/*" capture="environment"
+<input type="file" id="updatePhotoInput" accept="image/*,application/pdf,.pdf"
        class="hidden-input" onchange="updateDocPhoto(this)">
 
 <script>
@@ -1141,12 +1147,24 @@ function openDocModal(id) {
     document.getElementById('d_alertDays').value = d.alertDays || '30';
     document.getElementById('d_memo').value      = d.memo || '';
     if (d.photo) {
-      document.getElementById('d_photoImg').src = d.photo;
-      document.getElementById('d_photoImg').style.display = 'block';
       document.getElementById('d_photoPlaceholder').style.display = 'none';
+      if (d.isPdf) {
+        document.getElementById('d_photoImg').style.display = 'none';
+        document.getElementById('d_fileName').textContent = d.fileName || 'ファイル';
+        document.getElementById('d_fileInfo').style.display = 'block';
+      } else {
+        document.getElementById('d_photoImg').src = d.photo;
+        document.getElementById('d_photoImg').style.display = 'block';
+        document.getElementById('d_fileInfo').style.display = 'none';
+      }
+      document.getElementById('d_photoImg').dataset.fileData = d.photo;
+      document.getElementById('d_photoImg').dataset.fileName = d.fileName || '';
+      document.getElementById('d_photoImg').dataset.isPdf = d.isPdf ? '1' : '0';
     } else {
       document.getElementById('d_photoImg').style.display = 'none';
+      document.getElementById('d_fileInfo').style.display = 'none';
       document.getElementById('d_photoPlaceholder').style.display = '';
+      document.getElementById('d_photoImg').dataset.fileData = '';
     }
   } else {
     document.getElementById('docModalTitle').textContent = '📄 書類を追加';
@@ -1156,8 +1174,12 @@ function openDocModal(id) {
     document.getElementById('d_alertDays').value = '30';
     document.getElementById('d_memo').value      = '';
     document.getElementById('d_photoImg').style.display = 'none';
+    document.getElementById('d_fileInfo').style.display = 'none';
     document.getElementById('d_photoPlaceholder').style.display = '';
     document.getElementById('d_photoImg').src = '';
+    document.getElementById('d_photoImg').dataset.fileData = '';
+    document.getElementById('d_photoImg').dataset.fileName = '';
+    document.getElementById('d_photoImg').dataset.isPdf = '0';
   }
   modal.classList.add('open');
 }
@@ -1168,11 +1190,23 @@ function closeDocModal() {
 function previewPhoto(input) {
   const file = input.files[0];
   if (!file) return;
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('d_photoImg').src = e.target.result;
-    document.getElementById('d_photoImg').style.display = 'block';
     document.getElementById('d_photoPlaceholder').style.display = 'none';
+    if (isPdf) {
+      document.getElementById('d_photoImg').style.display = 'none';
+      document.getElementById('d_fileName').textContent = file.name;
+      document.getElementById('d_fileInfo').style.display = 'block';
+    } else {
+      document.getElementById('d_fileInfo').style.display = 'none';
+      document.getElementById('d_photoImg').src = e.target.result;
+      document.getElementById('d_photoImg').style.display = 'block';
+    }
+    // base64データをimgに格納（PDF含む全タイプ保存用）
+    document.getElementById('d_photoImg').dataset.fileData = e.target.result;
+    document.getElementById('d_photoImg').dataset.fileName = file.name;
+    document.getElementById('d_photoImg').dataset.isPdf = isPdf ? '1' : '0';
   };
   reader.readAsDataURL(file);
 }
@@ -1182,7 +1216,12 @@ function saveDoc() {
   const expiry    = document.getElementById('d_expiry').value;
   const alertDays = parseInt(document.getElementById('d_alertDays').value);
   const memo      = document.getElementById('d_memo').value.trim();
-  const photo     = document.getElementById('d_photoImg').src || null;
+  const imgEl     = document.getElementById('d_photoImg');
+  const photo     = (imgEl.dataset.fileData) ? imgEl.dataset.fileData
+                  : (imgEl.style.display !== 'none' && imgEl.src) ? imgEl.src
+                  : null;
+  const fileName  = imgEl.dataset.fileName || null;
+  const isPdf     = imgEl.dataset.isPdf === '1';
   const typeNames = { shakken:'車検証', jibai:'自賠責保険', ninni:'任意保険',
                       kamotsu:'貨物保険', menkyo:'免許証', seibiki:'定期整備記録簿', other:'その他' };
   const displayName = name || typeNames[type] || '書類';
@@ -1191,12 +1230,14 @@ function saveDoc() {
 
   if (editingDocId) {
     const idx = data.docs.findIndex(d => d.id === editingDocId);
-    const oldPhoto = data.docs[idx].photo;
-    data.docs[idx] = { ...data.docs[idx], type, name: displayName, expiry, alertDays, memo,
-      photo: (document.getElementById('d_photoImg').style.display !== 'none' && document.getElementById('d_photoImg').src) ? document.getElementById('d_photoImg').src : oldPhoto };
+    const oldDoc = data.docs[idx];
+    data.docs[idx] = { ...oldDoc, type, name: displayName, expiry, alertDays, memo,
+      photo: photo || oldDoc.photo,
+      fileName: fileName || oldDoc.fileName || null,
+      isPdf: photo ? isPdf : (oldDoc.isPdf || false) };
   } else {
-    const photoSrc = document.getElementById('d_photoImg').style.display !== 'none' ? document.getElementById('d_photoImg').src : null;
-    data.docs.push({ id: Date.now(), type, name: displayName, expiry, alertDays, memo, photo: photoSrc });
+    data.docs.push({ id: Date.now(), type, name: displayName, expiry, alertDays, memo,
+      photo, fileName, isPdf });
   }
   saveData();
   closeDocModal();
