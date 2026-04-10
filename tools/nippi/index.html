@@ -148,6 +148,15 @@
       border-color: var(--primary);
       color: var(--primary);
     }
+    .alcohol-btn {
+      border-color: #FFCDD2;
+      color: var(--red);
+    }
+    .alcohol-btn.done {
+      background: #E8F5E9;
+      border-color: #66BB6A;
+      color: #2E7D32;
+    }
 
     /* 案件カード */
     .trip-card {
@@ -556,12 +565,17 @@
 <!-- ===== 今日の運行 ===== -->
 <div id="tab-today" class="tab-content active">
 
-  <!-- 日常点検 -->
+  <!-- 日常点検 + アルコール検知 -->
   <div class="card">
-    <h2>🔍 日常点検（出発前）</h2>
-    <button class="inspection-btn" id="inspectionBtn" onclick="toggleInspection()">
-      ✅ 点検完了にする
-    </button>
+    <h2>🔍 出発前チェック</h2>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="inspection-btn" id="inspectionBtn" onclick="toggleInspection()">
+        ⬜ 日常点検を完了にする
+      </button>
+      <button class="inspection-btn alcohol-btn" id="alcoholBtn" onclick="toggleAlcohol()">
+        🍺 アルコール検知（未実施）
+      </button>
+    </div>
   </div>
 
   <!-- カレンダー同期バー -->
@@ -871,7 +885,7 @@ async function loadFromCalendar() {
 
 // ===== データ管理 =====
 const STORAGE_KEY = 'akaboTimeNippi_v1';
-let data = { trips: [], docs: [], inspections: {} };
+let data = { trips: [], docs: [], inspections: {}, alcoholChecks: {} };
 
 function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -943,6 +957,28 @@ function renderInspection() {
     btn.classList.add('done');
   } else {
     btn.textContent = '⬜ 日常点検を完了にする';
+    btn.classList.remove('done');
+  }
+}
+
+// ===== アルコール検知 =====
+function toggleAlcohol() {
+  const t = today();
+  if (!data.alcoholChecks) data.alcoholChecks = {};
+  data.alcoholChecks[t] = !data.alcoholChecks[t];
+  saveData();
+  renderAlcohol();
+}
+function renderAlcohol() {
+  const t = today();
+  if (!data.alcoholChecks) data.alcoholChecks = {};
+  const done = data.alcoholChecks[t];
+  const btn = document.getElementById('alcoholBtn');
+  if (done) {
+    btn.textContent = '✅ アルコール検知 OK（タップで取消）';
+    btn.classList.add('done');
+  } else {
+    btn.textContent = '🍺 アルコール検知（未実施）';
     btn.classList.remove('done');
   }
 }
@@ -1334,6 +1370,7 @@ function updateHeaderPlate() {
 loadData();
 updateHeaderDate();
 renderInspection();
+renderAlcohol();
 renderTrips();
 renderDocs();
 loadBizInfo();
