@@ -241,6 +241,121 @@
       margin-bottom: 8px;
       color: var(--primary);
     }
+
+    /* ===== 引越し料金早見表セクション ===== */
+    .moving-section {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 18px 14px 16px;
+      margin-top: 22px;
+      box-shadow: 0 2px 12px var(--shadow);
+    }
+    .moving-section h2 {
+      font-size: 16px;
+      color: var(--primary);
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .moving-section .sub {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+    .moving-hour-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .moving-hour-tabs button {
+      flex: 1 0 auto;
+      min-width: 64px;
+      padding: 8px 10px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-mid);
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .moving-hour-tabs button.on {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .moving-wrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .moving-scroll {
+      max-height: 360px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .moving-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+    .moving-table th,
+    .moving-table td {
+      padding: 6px 10px;
+      text-align: right;
+      border-bottom: 1px solid #EEF4F9;
+      white-space: nowrap;
+    }
+    .moving-table thead th {
+      background: var(--primary-pale);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 11.5px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .moving-table td:first-child,
+    .moving-table th:first-child {
+      text-align: center;
+      color: var(--text);
+      font-weight: 700;
+      background: #F7FBFF;
+      position: sticky;
+      left: 0;
+      width: 56px;
+    }
+    .moving-table th:first-child {
+      z-index: 3;
+    }
+    .moving-table tbody tr:nth-child(even) td {
+      background: #FAFCFE;
+    }
+    .moving-table tbody tr:nth-child(even) td:first-child {
+      background: #F1F7FC;
+    }
+    .moving-table .work-col {
+      color: var(--text-mid);
+      font-weight: 600;
+    }
+    .moving-note {
+      background: #FFFBEC;
+      border-left: 3px solid #F5D55A;
+      padding: 11px 13px;
+      margin-top: 12px;
+      font-size: 11.5px;
+      color: #6B5A10;
+      line-height: 1.75;
+      border-radius: 6px;
+    }
+    .moving-note b { color: #5A4A00; }
   </style>
 </head>
 <body>
@@ -419,6 +534,37 @@
     51〜100km: +¥187/km（超過分）<br>
     101〜150km: +¥154/km（超過分）<br>
     151km〜: +¥132/km（超過分）
+  </div>
+</div>
+
+<!-- 引越し料金早見表 -->
+<div class="moving-section">
+  <h2>📦 赤帽引越運賃 料金早見表</h2>
+  <p class="sub">2023年12月改定・消費税率10%（税込）</p>
+
+  <div class="moving-hour-tabs" id="movingHourTabs">
+    <button type="button" data-hours="work" class="on">作業料金のみ</button>
+    <button type="button" data-hours="2">2時間</button>
+    <button type="button" data-hours="2.5">2.5時間</button>
+    <button type="button" data-hours="3">3時間</button>
+    <button type="button" data-hours="3.5">3.5時間</button>
+    <button type="button" data-hours="4">4時間</button>
+    <button type="button" data-hours="all">全表示</button>
+  </div>
+
+  <div class="moving-wrap">
+    <div class="moving-scroll">
+      <table class="moving-table" id="movingTable">
+        <thead id="movingThead"></thead>
+        <tbody id="movingTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="moving-note">
+    💡 <b>引越し料金は上記運賃のみの目安です。</b><br>
+    お手伝いの有無・階数・荷物量・家具家電の取外し設置など、変動要素が多いため、正確な料金は現地確認後にご案内します。<br>
+    貨物保険300万円補償・インボイス対応・領収書発行可
   </div>
 </div>
 
@@ -711,6 +857,105 @@ function copyText() {
     alert('コピーしました！LINEやメールにそのまま貼り付けできます');
   });
 }
+
+// ===== 赤帽引越運賃 早見表データ（2023.12改定・税込） =====
+// 出典: 赤帽引越運賃・料金早見表（税込）2023年12月改定版
+// 税率10%、※運賃料金に含まれている消費税額 = 運賃料金 × 10/110
+const MOVING_FARE = {
+  revision: '2023年12月改定',
+  taxIncluded: true,
+
+  // 作業料金（距離制運賃、税込）
+  // 〜20km: 5,500固定／21〜50km: +242/km／51〜100km: +187/km
+  // 101〜150km: +154/km／151km〜: +132/km
+  workFee(km) {
+    if (km <= 20)  return 5500;
+    if (km <= 50)  return 5500  + (km - 20)  * 242;
+    if (km <= 100) return 12760 + (km - 50)  * 187;
+    if (km <= 150) return 22110 + (km - 100) * 154;
+    return 29810 + (km - 150) * 132;
+  },
+
+  // 時間制運賃の時間加算料金（作業料金に加算、税込）
+  hourRates: {
+    '2':   8800,
+    '2.5': 10450,
+    '3':   12100,
+    '3.5': 13750,
+    '4':   15400,
+  },
+
+  // 時間制運賃（作業料金 + 時間加算）
+  timeFare(km, hours) {
+    return this.workFee(km) + this.hourRates[String(hours)];
+  },
+
+  // 早見表に掲載するkmリスト（画像どおり）
+  // 20km（〜20km同額）／21〜50（1km刻み）／51〜100（1km刻み）／110〜600（10km刻み）
+  kmList: (() => {
+    const list = [20];
+    for (let km = 21;  km <= 50;  km++)        list.push(km);
+    for (let km = 51;  km <= 100; km++)        list.push(km);
+    for (let km = 110; km <= 600; km += 10)    list.push(km);
+    return list;
+  })(),
+};
+
+// ===== 早見表レンダリング =====
+let movingActiveHours = 'work'; // 'work' | '2' | '2.5' | '3' | '3.5' | '4' | 'all'
+
+function renderMovingTable() {
+  const thead = document.getElementById('movingThead');
+  const tbody = document.getElementById('movingTbody');
+  if (!thead || !tbody) return;
+
+  const h = movingActiveHours;
+  const allHours = ['2', '2.5', '3', '3.5', '4'];
+
+  // ヘッダー構築
+  let headCols = ['km', '作業料金'];
+  if (h === 'all') {
+    headCols = ['km', '作業料金', '2時間', '2.5時間', '3時間', '3.5時間', '4時間'];
+  } else if (h !== 'work') {
+    headCols = ['km', '作業料金', `${h}時間`];
+  }
+  thead.innerHTML = '<tr>' + headCols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+  // ボディ構築
+  const rows = MOVING_FARE.kmList.map(km => {
+    const work = MOVING_FARE.workFee(km);
+    const kmLabel = km === 20 ? '〜20' : km;
+    const cells = [
+      `<td>${kmLabel}</td>`,
+      `<td class="work-col">${work.toLocaleString()}</td>`,
+    ];
+    if (h === 'all') {
+      allHours.forEach(hr => {
+        cells.push(`<td>${MOVING_FARE.timeFare(km, hr).toLocaleString()}</td>`);
+      });
+    } else if (h !== 'work') {
+      cells.push(`<td>${MOVING_FARE.timeFare(km, h).toLocaleString()}</td>`);
+    }
+    return `<tr>${cells.join('')}</tr>`;
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+// 時間タブの切り替え
+(function setupMovingTabs() {
+  const tabs = document.getElementById('movingHourTabs');
+  if (!tabs) return;
+  tabs.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-hours]');
+    if (!btn) return;
+    movingActiveHours = btn.dataset.hours;
+    tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
+    renderMovingTable();
+  });
+})();
+
+// 初期描画
+renderMovingTable();
 </script>
 </body>
 </html>
