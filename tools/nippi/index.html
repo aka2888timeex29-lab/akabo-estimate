@@ -484,6 +484,51 @@
     .empty-state .emoji { font-size: 40px; margin-bottom: 10px; }
     .empty-state p { font-size: 13px; }
 
+    /* バックアップセクション */
+    .backup-section {
+      margin-top: 24px;
+      padding: 16px;
+      background: #F5F5F0;
+      border-radius: 12px;
+      border: 1.5px dashed #CCC8C0;
+    }
+    .backup-section h3 {
+      font-size: 14px;
+      margin: 0 0 10px 0;
+      color: var(--text);
+    }
+    .backup-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .backup-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .backup-btn.export {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .backup-btn.import {
+      background: #fff;
+      color: var(--text);
+    }
+    .backup-btn:active { opacity: 0.8; }
+    .backup-note {
+      font-size: 11px;
+      color: var(--text-light);
+      margin: 8px 0 0 0;
+      line-height: 1.6;
+    }
+
     /* 隠しファイル入力 */
     .hidden-input { display: none; }
 
@@ -659,6 +704,17 @@
   </div>
 
   <div id="historyList"></div>
+
+  <!-- バックアップ -->
+  <div class="backup-section">
+    <h3>💾 データバックアップ</h3>
+    <div class="backup-btns">
+      <button class="backup-btn export" onclick="exportData()">📤 エクスポート</button>
+      <button class="backup-btn import" onclick="document.getElementById('importFile').click()">📥 インポート</button>
+      <input type="file" id="importFile" accept=".json" class="hidden-input" onchange="importData(event)">
+    </div>
+    <p class="backup-note">エクスポートで全データをJSON保存。機種変更やデータ消失時にインポートで復元できます。</p>
+  </div>
 
 </div>
 
@@ -899,6 +955,45 @@ function loadData() {
 }
 function saveData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// ===== バックアップ（エクスポート/インポート） =====
+function exportData() {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'nippi_backup_' + dateStr + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  alert('バックアップを保存しました');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm('現在のデータを上書きします。よろしいですか？')) {
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.trips) throw new Error('trips が見つかりません');
+      data = imported;
+      saveData();
+      renderTrips();
+      renderHistory();
+      alert('データを復元しました（' + data.trips.length + '件の運行記録）');
+    } catch (err) {
+      alert('インポート失敗: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ===== 日付ユーティリティ =====
