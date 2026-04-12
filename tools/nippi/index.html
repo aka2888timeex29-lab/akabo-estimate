@@ -71,6 +71,21 @@
       margin-top: 6px;
     }
     .header .date { font-size: 11.5px; opacity: 0.85; }
+    .reload-btn {
+      background: rgba(255,255,255,0.25);
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+    }
+    .reload-btn:active { background: rgba(255,255,255,0.45); }
     .header-plate {
       font-size: 12px;
       font-weight: 700;
@@ -593,6 +608,7 @@
       <h1>赤帽タイム便</h1>
       <div class="subtitle">🚛 運行管理システム</div>
     </div>
+    <button class="reload-btn" onclick="location.reload()" title="リロード">🔄</button>
   </div>
   <div class="header-bottom">
     <div class="date" id="headerDate"></div>
