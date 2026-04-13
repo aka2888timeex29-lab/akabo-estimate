@@ -660,6 +660,11 @@
   <div class="card">
     <h2>📋 事業者情報</h2>
     <div class="form-group">
+      <label>運転者氏名</label>
+      <input type="text" id="biz_driver" placeholder="例：阿部 学"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
       <label>経営届出番号（貨物軽自動車運送事業）</label>
       <input type="text" id="biz_delivery" placeholder="例：山形000号"
         oninput="saveBizInfo()" style="margin-bottom:0;">
@@ -859,6 +864,9 @@
       <button class="btn-cancel" onclick="closeTripModal()">キャンセル</button>
       <button class="btn-save" onclick="saveTrip()">保存する</button>
     </div>
+    <div id="printBtnArea" style="display:none; margin-top:8px;">
+      <button onclick="printTripRecord(editingTripId)" style="width:100%; padding:10px; background:#F5F5F0; border:1.5px solid #CCC8C0; border-radius:10px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">📄 業務記録を出力（印刷/PDF）</button>
+    </div>
   </div>
 </div>
 
@@ -1049,6 +1057,145 @@ function importData(event) {
   reader.readAsText(file);
 }
 
+// ===== 業務記録 印刷出力 =====
+function printTripRecord(id) {
+  const t = data.trips.find(tr => tr.id === id);
+  if (!t) { alert('案件が見つかりません'); return; }
+  const biz = data.bizInfo || {};
+  const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0;
+
+  // 日付を令和変換
+  function toReiwa(dateStr) {
+    if (!dateStr) return { y:'', m:'', d:'' };
+    const dt = new Date(dateStr);
+    const y = dt.getFullYear() - 2018;
+    return { y: y, m: dt.getMonth()+1, d: dt.getDate() };
+  }
+  const rd = toReiwa(t.date);
+
+  // 経過地点をパース（「→」や「、」区切り）
+  const wpText = t.waypoints || '';
+  const wpList = wpText ? wpText.split(/[→、,]/).map(s => s.trim()).filter(Boolean) : [];
+  const wpRows = Math.max(wpList.length, 6);
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>業務の記録 - ${t.client} ${t.date}</title>
+<style>
+  @page { size: A4; margin: 15mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; font-size: 11px; color: #000; line-height: 1.4; }
+  h1 { text-align: center; font-size: 16px; margin: 10px 0 12px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; font-size: 11px; }
+  th { background: #E8F4FD; font-weight: 700; white-space: nowrap; width: 140px; }
+  .section-title { background: #5B9BD5; color: #fff; font-weight: 700; font-size: 12px; padding: 5px 8px; }
+  .note { font-size: 9.5px; color: #555; margin-bottom: 10px; line-height: 1.5; }
+  .center { text-align: center; }
+  .small-table th { width: auto; }
+  .footer { font-size: 10px; text-align: right; color: #666; margin-top: 20px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<h1>業務の記録</h1>
+
+<table>
+  <tr><th>運転者の氏名</th><td colspan="5">${biz.driver || ''}</td></tr>
+  <tr><th>車両番号</th><td colspan="5">${biz.plate || ''}</td></tr>
+  <tr><th>日にち</th><td colspan="5">令和 ${rd.y} 年 ${rd.m} 月 ${rd.d} 日</td></tr>
+  <tr>
+    <th>業務開始地点・日時</th>
+    <td colspan="2">${t.from || ''}</td>
+    <td colspan="3">${t.startTime || ''}</td>
+  </tr>
+  <tr>
+    <th>業務終了地点・日時</th>
+    <td colspan="2">${t.to || ''}</td>
+    <td colspan="3">${t.endTime || ''}</td>
+  </tr>
+  <tr>
+    <th>走行距離計の表示</th>
+    <td>出発時</td><td class="center">${t.startOdo ? t.startOdo.toLocaleString() : ''} km</td>
+    <td>到着時</td><td colspan="2" class="center">${t.endOdo ? t.endOdo.toLocaleString() : ''} km</td>
+  </tr>
+  <tr>
+    <th>業務に従事した距離</th>
+    <td colspan="5">${km} km</td>
+  </tr>
+</table>
+
+<table>
+  <tr><td colspan="4" class="section-title">主な経過地点・到着時刻・出発時刻</td></tr>
+  <tr>
+    <th class="center" style="width:40%">地点</th>
+    <th class="center" style="width:15%">着時刻</th>
+    <th class="center" style="width:15%">発時刻</th>
+    <th class="center" style="width:30%">備考</th>
+  </tr>
+  ${Array.from({length: wpRows}, (_, i) => {
+    const wp = wpList[i] || '';
+    return `<tr><td>${wp}</td><td></td><td></td><td></td></tr>`;
+  }).join('')}
+</table>
+
+${(t.breakStart || t.breakEnd || t.breakLocation) ? `
+<table>
+  <tr><td colspan="4" class="section-title">休憩</td></tr>
+  <tr>
+    <th>休憩地点</th><td>${t.breakLocation || ''}</td>
+    <th>時間</th><td>${t.breakStart || ''} 〜 ${t.breakEnd || ''}</td>
+  </tr>
+</table>
+` : ''}
+
+<table>
+  <tr><th>業務を交替した場合、地点・日時</th><td>令和　年　月　日</td></tr>
+</table>
+
+<table>
+  <tr><td colspan="6" class="section-title">荷主の都合により集貨又は配達を行った地点で30分以上待機した場合</td></tr>
+  <tr><th>集貨地点等</th><td colspan="5"></td></tr>
+  <tr><th>到着指定日時（荷主指定の場合）</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>
+  <tr><th>到着日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>
+  <tr><th>荷役作業の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">〜</td></tr>
+  <tr><th>附帯業務の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">〜</td></tr>
+  <tr><th>出発日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>
+  <tr><th>備考</th><td colspan="5"></td></tr>
+</table>
+
+<p class="note">※1「集貨地点等」は、集貨又は配達を行った地点。「荷役作業」は、集貨地点等における積込み又は取卸し。「附帯業務」は、集貨地点等で、貨物の荷造り、仕分その他の貨物自動車運送事業に附帯する業務。<br>
+※2 荷主の都合とは、事業者としての運行計画又は運行指示によらない、荷主の指示等によるものをいい、事業者の都合により生じた待機時間は、これに含まない。</p>
+
+<table>
+  <tr><td colspan="5" class="section-title">荷役作業又は附帯業務（荷役作業等）を実施した場合</td></tr>
+  <tr><th>集貨地点等</th><td colspan="4"></td></tr>
+  <tr><th>荷役作業等の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="2">〜</td></tr>
+  <tr><th>荷役作業等の内容</th><td colspan="4"></td></tr>
+  <tr><th>荷主の確認の有無</th><td colspan="4"></td></tr>
+  <tr><th>備考</th><td colspan="4"></td></tr>
+</table>
+
+<table>
+  <tr><td colspan="2" class="section-title">事故、著しい運行の遅延、その他の異常な状態が発生した場合</td></tr>
+  <tr><th>概要及び要因</th><td style="height:50px">${t.memo || ''}</td></tr>
+</table>
+
+<p class="footer">（保存期間：1年）&emsp;赤帽タイム便 運行管理システム（nippi）より出力</p>
+
+<script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 // ===== 日付ユーティリティ =====
 function today() {
   return new Date().toISOString().split('T')[0];
@@ -1171,6 +1318,7 @@ function openTripModal(id) {
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('f_type').value = '';
   }
+  document.getElementById('printBtnArea').style.display = id ? 'block' : 'none';
   modal.classList.add('open');
 }
 function closeTripModal() {
@@ -1541,6 +1689,7 @@ function setNow(fieldId) {
 // ===== 事業者情報 =====
 function saveBizInfo() {
   data.bizInfo = {
+    driver:   document.getElementById('biz_driver').value,
     delivery: document.getElementById('biz_delivery').value,
     invoice:  document.getElementById('biz_invoice').value,
     kumiai:   document.getElementById('biz_kumiai').value,
@@ -1551,6 +1700,7 @@ function saveBizInfo() {
 }
 function loadBizInfo() {
   if (!data.bizInfo) return;
+  document.getElementById('biz_driver').value   = data.bizInfo.driver   || '';
   document.getElementById('biz_delivery').value = data.bizInfo.delivery || '';
   document.getElementById('biz_invoice').value  = data.bizInfo.invoice  || '';
   document.getElementById('biz_kumiai').value   = data.bizInfo.kumiai   || '';
