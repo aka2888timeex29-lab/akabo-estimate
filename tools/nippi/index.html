@@ -1064,136 +1064,98 @@ function printTripRecord(id) {
   const biz = data.bizInfo || {};
   const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0;
 
-  // 日付を令和変換
   function toReiwa(dateStr) {
-    if (!dateStr) return { y:'', m:'', d:'' };
+    if (!dateStr) return '';
     const dt = new Date(dateStr);
-    const y = dt.getFullYear() - 2018;
-    return { y: y, m: dt.getMonth()+1, d: dt.getDate() };
+    return '令和 ' + (dt.getFullYear() - 2018) + ' 年 ' + (dt.getMonth()+1) + ' 月 ' + dt.getDate() + ' 日';
   }
-  const rd = toReiwa(t.date);
 
-  // 経過地点をパース（「→」や「、」区切り）
   const wpText = t.waypoints || '';
-  const wpList = wpText ? wpText.split(/[→、,]/).map(s => s.trim()).filter(Boolean) : [];
-  const wpRows = Math.max(wpList.length, 6);
-
-  const html = `<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>業務の記録 - ${t.client} ${t.date}</title>
-<style>
-  @page { size: A4; margin: 15mm; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; font-size: 11px; color: #000; line-height: 1.4; }
-  h1 { text-align: center; font-size: 16px; margin: 10px 0 12px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-  th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; font-size: 11px; }
-  th { background: #E8F4FD; font-weight: 700; white-space: nowrap; width: 140px; }
-  .section-title { background: #5B9BD5; color: #fff; font-weight: 700; font-size: 12px; padding: 5px 8px; }
-  .note { font-size: 9.5px; color: #555; margin-bottom: 10px; line-height: 1.5; }
-  .center { text-align: center; }
-  .small-table th { width: auto; }
-  .footer { font-size: 10px; text-align: right; color: #666; margin-top: 20px; }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  const wpList = wpText ? wpText.split(/[→、,]/).map(function(s){return s.trim()}).filter(Boolean) : [];
+  var wpRowsHtml = '';
+  for (var i = 0; i < Math.max(wpList.length, 6); i++) {
+    wpRowsHtml += '<tr><td>' + (wpList[i]||'') + '</td><td></td><td></td><td></td></tr>';
   }
-</style>
-</head>
-<body>
-<h1>業務の記録</h1>
 
-<table>
-  <tr><th>運転者の氏名</th><td colspan="5">${biz.driver || ''}</td></tr>
-  <tr><th>車両番号</th><td colspan="5">${biz.plate || ''}</td></tr>
-  <tr><th>日にち</th><td colspan="5">令和 ${rd.y} 年 ${rd.m} 月 ${rd.d} 日</td></tr>
-  <tr>
-    <th>業務開始地点・日時</th>
-    <td colspan="2">${t.from || ''}</td>
-    <td colspan="3">${t.startTime || ''}</td>
-  </tr>
-  <tr>
-    <th>業務終了地点・日時</th>
-    <td colspan="2">${t.to || ''}</td>
-    <td colspan="3">${t.endTime || ''}</td>
-  </tr>
-  <tr>
-    <th>走行距離計の表示</th>
-    <td>出発時</td><td class="center">${t.startOdo ? t.startOdo.toLocaleString() : ''} km</td>
-    <td>到着時</td><td colspan="2" class="center">${t.endOdo ? t.endOdo.toLocaleString() : ''} km</td>
-  </tr>
-  <tr>
-    <th>業務に従事した距離</th>
-    <td colspan="5">${km} km</td>
-  </tr>
-</table>
+  var breakHtml = '';
+  if (t.breakStart || t.breakEnd || t.breakLocation) {
+    breakHtml = '<table><tr><td colspan="4" class="st">休憩</td></tr>'
+      + '<tr><th>休憩地点</th><td>' + (t.breakLocation||'') + '</td>'
+      + '<th>時間</th><td>' + (t.breakStart||'') + ' ～ ' + (t.breakEnd||'') + '</td></tr></table>';
+  }
 
-<table>
-  <tr><td colspan="4" class="section-title">主な経過地点・到着時刻・出発時刻</td></tr>
-  <tr>
-    <th class="center" style="width:40%">地点</th>
-    <th class="center" style="width:15%">着時刻</th>
-    <th class="center" style="width:15%">発時刻</th>
-    <th class="center" style="width:30%">備考</th>
-  </tr>
-  ${Array.from({length: wpRows}, (_, i) => {
-    const wp = wpList[i] || '';
-    return `<tr><td>${wp}</td><td></td><td></td><td></td></tr>`;
-  }).join('')}
-</table>
+  // 印刷用オーバーレイを作成
+  var overlay = document.getElementById('printOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'printOverlay';
+    document.body.appendChild(overlay);
+    var style = document.createElement('style');
+    style.textContent = [
+      '#printOverlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#fff; z-index:9999; overflow:auto; padding:15px; }',
+      '#printOverlay.open { display:block; }',
+      '#printOverlay h1 { text-align:center; font-size:16px; margin:0 0 10px; }',
+      '#printOverlay table { width:100%; border-collapse:collapse; margin-bottom:10px; }',
+      '#printOverlay th, #printOverlay td { border:1px solid #333; padding:3px 5px; font-size:11px; text-align:left; }',
+      '#printOverlay th { background:#E8F4FD; font-weight:700; white-space:nowrap; width:130px; }',
+      '#printOverlay .st { background:#5B9BD5; color:#fff; font-weight:700; font-size:11px; padding:4px 6px; }',
+      '#printOverlay .note { font-size:9px; color:#555; margin-bottom:8px; line-height:1.5; }',
+      '#printOverlay .ft { font-size:9px; text-align:right; color:#888; margin-top:12px; }',
+      '#printOverlay .print-bar { display:flex; gap:8px; margin-bottom:12px; }',
+      '#printOverlay .print-bar button { flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; border:1.5px solid #ccc; }',
+      '#printOverlay .print-bar .p-btn { background:#5B9BD5; color:#fff; border-color:#5B9BD5; }',
+      '@media print { #printOverlay .print-bar { display:none !important; } body > *:not(#printOverlay) { display:none !important; } #printOverlay { position:static; padding:0; } }',
+    ].join('\n');
+    document.head.appendChild(style);
+  }
 
-${(t.breakStart || t.breakEnd || t.breakLocation) ? `
-<table>
-  <tr><td colspan="4" class="section-title">休憩</td></tr>
-  <tr>
-    <th>休憩地点</th><td>${t.breakLocation || ''}</td>
-    <th>時間</th><td>${t.breakStart || ''} 〜 ${t.breakEnd || ''}</td>
-  </tr>
-</table>
-` : ''}
+  overlay.innerHTML = '<div class="print-bar">'
+    + '<button class="p-btn" onclick="window.print()">🖨 印刷 / PDF保存</button>'
+    + '<button onclick="document.getElementById(\'printOverlay\').classList.remove(\'open\')">✕ 閉じる</button>'
+    + '</div>'
+    + '<h1>業務の記録</h1>'
+    + '<table>'
+    + '<tr><th>運転者の氏名</th><td colspan="5">' + (biz.driver||'') + '</td></tr>'
+    + '<tr><th>車両番号</th><td colspan="5">' + (biz.plate||'') + '</td></tr>'
+    + '<tr><th>日にち</th><td colspan="5">' + toReiwa(t.date) + '</td></tr>'
+    + '<tr><th>業務開始地点・日時</th><td colspan="2">' + (t.from||'') + '</td><td colspan="3">' + (t.startTime||'') + '</td></tr>'
+    + '<tr><th>業務終了地点・日時</th><td colspan="2">' + (t.to||'') + '</td><td colspan="3">' + (t.endTime||'') + '</td></tr>'
+    + '<tr><th>走行距離計の表示</th><td>出発時</td><td>' + (t.startOdo||'') + ' km</td><td>到着時</td><td colspan="2">' + (t.endOdo||'') + ' km</td></tr>'
+    + '<tr><th>業務に従事した距離</th><td colspan="5">' + km + ' km</td></tr>'
+    + '</table>'
+    + '<table><tr><td colspan="4" class="st">主な経過地点・到着時刻・出発時刻</td></tr>'
+    + '<tr><th style="width:40%;text-align:center">地点</th><th style="width:15%;text-align:center">着時刻</th><th style="width:15%;text-align:center">発時刻</th><th style="width:30%;text-align:center">備考</th></tr>'
+    + wpRowsHtml + '</table>'
+    + breakHtml
+    + '<table><tr><th>業務を交替した場合、地点・日時</th><td>令和　年　月　日</td></tr></table>'
+    + '<table>'
+    + '<tr><td colspan="6" class="st">荷主の都合により集貨又は配達を行った地点で30分以上待機した場合</td></tr>'
+    + '<tr><th>集貨地点等</th><td colspan="5"></td></tr>'
+    + '<tr><th>到着指定日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>'
+    + '<tr><th>到着日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>'
+    + '<tr><th>荷役作業の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">～</td></tr>'
+    + '<tr><th>附帯業務の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">～</td></tr>'
+    + '<tr><th>出発日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>'
+    + '<tr><th>備考</th><td colspan="5"></td></tr>'
+    + '</table>'
+    + '<p class="note">※1「集貨地点等」は、集貨又は配達を行った地点。「荷役作業」は、集貨地点等における積込み又は取卸し。「附帯業務」は、集貨地点等で、貨物の荷造り、仕分その他の貨物自動車運送事業に附帯する業務。<br>'
+    + '※2 荷主の都合とは、事業者としての運行計画又は運行指示によらない、荷主の指示等によるものをいい、事業者の都合により生じた待機時間は、これに含まない。</p>'
+    + '<table>'
+    + '<tr><td colspan="5" class="st">荷役作業又は附帯業務（荷役作業等）を実施した場合</td></tr>'
+    + '<tr><th>集貨地点等</th><td colspan="4"></td></tr>'
+    + '<tr><th>荷役作業等の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="2">～</td></tr>'
+    + '<tr><th>荷役作業等の内容</th><td colspan="4"></td></tr>'
+    + '<tr><th>荷主の確認の有無</th><td colspan="4"></td></tr>'
+    + '<tr><th>備考</th><td colspan="4"></td></tr>'
+    + '</table>'
+    + '<table>'
+    + '<tr><td colspan="2" class="st">事故、著しい運行の遅延、その他の異常な状態が発生した場合</td></tr>'
+    + '<tr><th>概要及び要因</th><td style="height:40px">' + (t.memo||'') + '</td></tr>'
+    + '</table>'
+    + '<p class="ft">（保存期間：1年）　赤帽タイム便 運行管理システム（nippi）より出力</p>';
 
-<table>
-  <tr><th>業務を交替した場合、地点・日時</th><td>令和　年　月　日</td></tr>
-</table>
-
-<table>
-  <tr><td colspan="6" class="section-title">荷主の都合により集貨又は配達を行った地点で30分以上待機した場合</td></tr>
-  <tr><th>集貨地点等</th><td colspan="5"></td></tr>
-  <tr><th>到着指定日時（荷主指定の場合）</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>
-  <tr><th>到着日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>
-  <tr><th>荷役作業の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">〜</td></tr>
-  <tr><th>附帯業務の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">〜</td></tr>
-  <tr><th>出発日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>
-  <tr><th>備考</th><td colspan="5"></td></tr>
-</table>
-
-<p class="note">※1「集貨地点等」は、集貨又は配達を行った地点。「荷役作業」は、集貨地点等における積込み又は取卸し。「附帯業務」は、集貨地点等で、貨物の荷造り、仕分その他の貨物自動車運送事業に附帯する業務。<br>
-※2 荷主の都合とは、事業者としての運行計画又は運行指示によらない、荷主の指示等によるものをいい、事業者の都合により生じた待機時間は、これに含まない。</p>
-
-<table>
-  <tr><td colspan="5" class="section-title">荷役作業又は附帯業務（荷役作業等）を実施した場合</td></tr>
-  <tr><th>集貨地点等</th><td colspan="4"></td></tr>
-  <tr><th>荷役作業等の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="2">〜</td></tr>
-  <tr><th>荷役作業等の内容</th><td colspan="4"></td></tr>
-  <tr><th>荷主の確認の有無</th><td colspan="4"></td></tr>
-  <tr><th>備考</th><td colspan="4"></td></tr>
-</table>
-
-<table>
-  <tr><td colspan="2" class="section-title">事故、著しい運行の遅延、その他の異常な状態が発生した場合</td></tr>
-  <tr><th>概要及び要因</th><td style="height:50px">${t.memo || ''}</td></tr>
-</table>
-
-<p class="footer">（保存期間：1年）&emsp;赤帽タイム便 運行管理システム（nippi）より出力</p>
-
-<script>window.onload = function() { window.print(); }</script>
-</body>
-</html>`;
-
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+  overlay.classList.add('open');
+  closeTripModal();
 }
 
 // ===== 日付ユーティリティ =====
