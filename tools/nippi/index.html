@@ -743,16 +743,22 @@
       <label>顧客名 / 案件名</label>
       <input type="text" id="f_client" placeholder="例：山田商店 引越し">
     </div>
-    <div class="form-group">
-      <label>仕事種別</label>
-      <select id="f_type">
-        <option value="">-- 未分類 --</option>
-        <option value="直接取引">直接取引</option>
-        <option value="プラットフォーム">プラットフォーム</option>
-        <option value="組合員依頼">組合員依頼</option>
-        <option value="MTG">MTG</option>
-        <option value="赤帽組合">赤帽組合</option>
-      </select>
+    <div class="form-row">
+      <div class="form-group">
+        <label>日付</label>
+        <input type="date" id="f_date">
+      </div>
+      <div class="form-group">
+        <label>仕事種別</label>
+        <select id="f_type">
+          <option value="">-- 未分類 --</option>
+          <option value="直接取引">直接取引</option>
+          <option value="プラットフォーム">プラットフォーム</option>
+          <option value="組合員依頼">組合員依頼</option>
+          <option value="MTG">MTG</option>
+          <option value="赤帽組合">赤帽組合</option>
+        </select>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -796,6 +802,37 @@
           <label>ODOメーター（到着）</label>
           <input type="number" id="f_endOdo" placeholder="例：12398">
         </div>
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">☕ 休憩記録（任意）</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>休憩開始</label>
+          <div class="time-input-group">
+            <input type="time" id="f_breakStart">
+            <button class="now-btn" onclick="setNow('f_breakStart')">今</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>休憩終了</label>
+          <div class="time-input-group">
+            <input type="time" id="f_breakEnd">
+            <button class="now-btn" onclick="setNow('f_breakEnd')">今</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>休憩地点</label>
+        <input type="text" id="f_breakLocation" placeholder="例：国見SA、コンビニ等">
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">📍 経過地点（任意）</div>
+      <div class="form-group">
+        <input type="text" id="f_waypoints" placeholder="例：山形蔵王IC → 村田JCT → 仙台宮城IC">
       </div>
     </div>
 
@@ -1109,21 +1146,28 @@ function openTripModal(id) {
   if (id) {
     const t = data.trips.find(t => t.id === id);
     document.getElementById('tripModalTitle').textContent = '✏️ 案件を編集';
-    document.getElementById('f_client').value    = t.client || '';
-    document.getElementById('f_from').value      = t.from || '';
-    document.getElementById('f_to').value        = t.to || '';
-    document.getElementById('f_type').value      = t.type || '';
-    document.getElementById('f_startTime').value = t.startTime || '';
-    document.getElementById('f_startOdo').value  = t.startOdo || '';
-    document.getElementById('f_endTime').value   = t.endTime || '';
-    document.getElementById('f_endOdo').value    = t.endOdo || '';
-    document.getElementById('f_toll').value      = t.toll || '';
-    document.getElementById('f_fuel').value      = t.fuel || '';
-    document.getElementById('f_memo').value      = t.memo || '';
+    document.getElementById('f_client').value        = t.client || '';
+    document.getElementById('f_date').value           = t.date || today();
+    document.getElementById('f_from').value           = t.from || '';
+    document.getElementById('f_to').value             = t.to || '';
+    document.getElementById('f_type').value           = t.type || '';
+    document.getElementById('f_startTime').value      = t.startTime || '';
+    document.getElementById('f_startOdo').value       = t.startOdo || '';
+    document.getElementById('f_endTime').value        = t.endTime || '';
+    document.getElementById('f_endOdo').value         = t.endOdo || '';
+    document.getElementById('f_breakStart').value     = t.breakStart || '';
+    document.getElementById('f_breakEnd').value       = t.breakEnd || '';
+    document.getElementById('f_breakLocation').value  = t.breakLocation || '';
+    document.getElementById('f_waypoints').value      = t.waypoints || '';
+    document.getElementById('f_toll').value           = t.toll || '';
+    document.getElementById('f_fuel').value           = t.fuel || '';
+    document.getElementById('f_memo').value           = t.memo || '';
   } else {
     document.getElementById('tripModalTitle').textContent = '📋 案件を追加';
+    document.getElementById('f_date').value = today();
     ['f_client','f_from','f_to','f_startTime','f_startOdo',
-     'f_endTime','f_endOdo','f_toll','f_fuel','f_memo']
+     'f_endTime','f_endOdo','f_breakStart','f_breakEnd','f_breakLocation',
+     'f_waypoints','f_toll','f_fuel','f_memo']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('f_type').value = '';
   }
@@ -1134,17 +1178,22 @@ function closeTripModal() {
   editingTripId = null;
 }
 function saveTrip() {
-  const client    = document.getElementById('f_client').value.trim();
-  const from      = document.getElementById('f_from').value.trim();
-  const to        = document.getElementById('f_to').value.trim();
-  const type      = document.getElementById('f_type').value;
-  const startTime = document.getElementById('f_startTime').value;
-  const startOdo  = parseInt(document.getElementById('f_startOdo').value) || null;
-  const endTime   = document.getElementById('f_endTime').value;
-  const endOdo    = parseInt(document.getElementById('f_endOdo').value) || null;
-  const toll      = parseInt(document.getElementById('f_toll').value) || null;
-  const fuel      = parseInt(document.getElementById('f_fuel').value) || null;
-  const memo      = document.getElementById('f_memo').value.trim();
+  const client        = document.getElementById('f_client').value.trim();
+  const date          = document.getElementById('f_date').value || today();
+  const from          = document.getElementById('f_from').value.trim();
+  const to            = document.getElementById('f_to').value.trim();
+  const type          = document.getElementById('f_type').value;
+  const startTime     = document.getElementById('f_startTime').value;
+  const startOdo      = parseInt(document.getElementById('f_startOdo').value) || null;
+  const endTime       = document.getElementById('f_endTime').value;
+  const endOdo        = parseInt(document.getElementById('f_endOdo').value) || null;
+  const breakStart    = document.getElementById('f_breakStart').value;
+  const breakEnd      = document.getElementById('f_breakEnd').value;
+  const breakLocation = document.getElementById('f_breakLocation').value.trim();
+  const waypoints     = document.getElementById('f_waypoints').value.trim();
+  const toll          = parseInt(document.getElementById('f_toll').value) || null;
+  const fuel          = parseInt(document.getElementById('f_fuel').value) || null;
+  const memo          = document.getElementById('f_memo').value.trim();
 
   if (!client) { alert('顧客名・案件名を入力してください'); return; }
 
@@ -1154,13 +1203,14 @@ function saveTrip() {
 
   if (editingTripId) {
     const idx = data.trips.findIndex(t => t.id === editingTripId);
-    data.trips[idx] = { ...data.trips[idx], client, from, to, type, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status };
+    data.trips[idx] = { ...data.trips[idx], date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, toll, fuel, memo, status };
   } else {
-    data.trips.push({ id: Date.now(), date: today(), client, from, to, type, startTime, startOdo, endTime, endOdo, toll, fuel, memo, status });
+    data.trips.push({ id: Date.now(), date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, toll, fuel, memo, status });
   }
   saveData();
   closeTripModal();
   renderTrips();
+  renderHistory();
 }
 function deleteTrip(id) {
   if (!confirm('この案件を削除しますか？')) return;
@@ -1470,7 +1520,7 @@ function renderHistory() {
     const km  = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : '-';
     const dur = calcDuration(t.startTime, t.endTime) || '-';
     return `
-    <div class="history-item">
+    <div class="history-item" onclick="openTripModal(${t.id})" style="cursor:pointer;">
       <div class="h-left">
         <div class="h-client">${t.client}</div>
         <div class="h-route">${t.date} ${(t.from||t.to) ? `／ ${t.from||'?'} → ${t.to||'?'}` : ''}</div>
