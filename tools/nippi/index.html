@@ -1308,8 +1308,8 @@ function saveTrip() {
   if (!client) { alert('顧客名・案件名を入力してください'); return; }
 
   let status = 'planned';
-  if (startTime && startOdo && endTime && endOdo) status = 'completed';
-  else if (startTime && startOdo) status = 'in-progress';
+  if (startTime && endTime) status = 'completed';
+  else if (startTime) status = 'in-progress';
 
   if (editingTripId) {
     const idx = data.trips.findIndex(t => t.id === editingTripId);
@@ -1330,20 +1330,20 @@ function deleteTrip(id) {
 }
 function startTrip(id) {
   const t = data.trips.find(t => t.id === id);
-  const odo = prompt('出発ODOメーターを入力してください（km）');
-  if (!odo) return;
+  const odo = prompt('出発ODOメーターを入力（km）\n※時間制の場合は空欄のままOKで開始できます');
+  if (odo === null) return; // キャンセル
   t.startTime = nowTime();
-  t.startOdo  = parseInt(odo);
+  t.startOdo  = odo ? parseInt(odo) : null;
   t.status    = 'in-progress';
   saveData();
   renderTrips();
 }
 function endTrip(id) {
   const t = data.trips.find(t => t.id === id);
-  const odo = prompt('到着ODOメーターを入力してください（km）');
-  if (!odo) return;
+  const odo = prompt('到着ODOメーターを入力（km）\n※時間制の場合は空欄のままOKで完了できます');
+  if (odo === null) return; // キャンセル
   t.endTime = nowTime();
-  t.endOdo  = parseInt(odo);
+  t.endOdo  = odo ? parseInt(odo) : null;
   t.status  = 'completed';
   saveData();
   renderTrips();
