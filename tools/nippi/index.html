@@ -1014,6 +1014,27 @@ function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) data = JSON.parse(saved);
 }
+
+// 既存の大きな画像データを自動圧縮（初回のみ実行）
+async function migrateCompressPhotos() {
+  var migrated = localStorage.getItem('akaboNippi_photoMigrated');
+  if (migrated || !data.docs || data.docs.length === 0) return;
+  var changed = false;
+  for (var i = 0; i < data.docs.length; i++) {
+    var doc = data.docs[i];
+    if (doc.photo && !doc.isPdf && doc.photo.length > 100000) {
+      try {
+        doc.photo = await compressImage(doc.photo, 800, 0.7);
+        changed = true;
+      } catch(e) { /* skip */ }
+    }
+  }
+  if (changed) {
+    saveData();
+    console.log('📦 既存書類の写真を圧縮しました');
+  }
+  localStorage.setItem('akaboNippi_photoMigrated', '1');
+}
 function saveData() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -1742,6 +1763,7 @@ function updateHeaderPlate() {
 
 // ===== 初期化 =====
 loadData();
+migrateCompressPhotos(); // 既存写真の自動圧縮（初回のみ）
 updateHeaderDate();
 renderInspection();
 renderAlcohol();
