@@ -1015,7 +1015,16 @@ function loadData() {
   if (saved) data = JSON.parse(saved);
 }
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      alert('⚠️ 保存容量の上限に達しました。\n書類の写真サイズが大きすぎる可能性があります。\n不要な書類を削除するか、エクスポートでバックアップしてください。');
+    } else {
+      alert('保存に失敗しました: ' + e.message);
+    }
+    console.error('saveData error:', e);
+  }
 }
 
 // ===== バックアップ（エクスポート/インポート） =====
@@ -1195,7 +1204,37 @@ function updateHeaderDate() {
 }
 
 // ===== タブ切替 =====
+// ===== 書類タブ PINロック =====
+var docsUnlocked = false;
+var DOCS_PIN_KEY = 'akaboTimeNippi_docsPin';
+
+function getDocsPin() { return localStorage.getItem(DOCS_PIN_KEY); }
+function setDocsPin(pin) { localStorage.setItem(DOCS_PIN_KEY, pin); }
+
+function checkDocsPin() {
+  var savedPin = getDocsPin();
+  if (!savedPin) {
+    // 初回: PIN設定を促す
+    var newPin = prompt('🔒 書類管理のPINを設定してください（4桁の数字）');
+    if (!newPin || !/^\d{4}$/.test(newPin)) { alert('4桁の数字で設定してください'); return false; }
+    var confirm2 = prompt('確認のためもう一度PINを入力してください');
+    if (newPin !== confirm2) { alert('PINが一致しません。やり直してください'); return false; }
+    setDocsPin(newPin);
+    alert('✅ PINを設定しました。次回から書類タブを開くときにPIN入力が必要です。');
+    return true;
+  }
+  var input = prompt('🔒 書類管理のPINを入力してください（4桁）');
+  if (input === savedPin) return true;
+  alert('❌ PINが違います');
+  return false;
+}
+
 function switchTab(tab) {
+  // 書類タブはPINロック
+  if (tab === 'docs' && !docsUnlocked) {
+    if (!checkDocsPin()) return;
+    docsUnlocked = true;
+  }
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
@@ -1458,24 +1497,42 @@ function closeDocModal() {
   document.getElementById('docModal').classList.remove('open');
   editingDocId = null;
 }
+// 画像をリサイズして容量を削減（max 800px、JPEG品質0.7）
+function compressImage(dataUrl, maxWidth, quality) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality || 0.7));
+    };
+    img.src = dataUrl;
+  });
+}
+
 function previewPhoto(input) {
   const file = input.files[0];
   if (!file) return;
   const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async function(e) {
+    var result = e.target.result;
     document.getElementById('d_photoPlaceholder').style.display = 'none';
     if (isPdf) {
       document.getElementById('d_photoImg').style.display = 'none';
       document.getElementById('d_fileName').textContent = file.name;
       document.getElementById('d_fileInfo').style.display = 'block';
     } else {
+      // 画像を圧縮（800px幅、品質70%）
+      result = await compressImage(result, 800, 0.7);
       document.getElementById('d_fileInfo').style.display = 'none';
-      document.getElementById('d_photoImg').src = e.target.result;
+      document.getElementById('d_photoImg').src = result;
       document.getElementById('d_photoImg').style.display = 'block';
     }
-    // base64データをimgに格納（PDF含む全タイプ保存用）
-    document.getElementById('d_photoImg').dataset.fileData = e.target.result;
+    document.getElementById('d_photoImg').dataset.fileData = result;
     document.getElementById('d_photoImg').dataset.fileName = file.name;
     document.getElementById('d_photoImg').dataset.isPdf = isPdf ? '1' : '0';
   };
@@ -1534,10 +1591,13 @@ function triggerPhotoUpdate(id) {
 function updateDocPhoto(input) {
   const file = input.files[0];
   if (!file || !updatingDocId) return;
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = async function(e) {
+    var result = e.target.result;
+    if (!isPdf) { result = await compressImage(result, 800, 0.7); }
     const doc = data.docs.find(d => d.id === updatingDocId);
-    if (doc) { doc.photo = e.target.result; saveData(); renderDocs(); }
+    if (doc) { doc.photo = result; saveData(); renderDocs(); }
     updatingDocId = null;
   };
   reader.readAsDataURL(file);
