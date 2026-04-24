@@ -1,0 +1,66 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# ===== 機密情報・非公開コンテンツ =====
+# 顧客名・単価・取引先情報を含む提案書
+tools/proposals/
+
+# 118社の営業リサーチデータ
+tools/sales_research/
+
+# 社内向けSEOレポート・分析資料
+tools/seo_report_*.md
+
+# 内部向けAI依頼プロンプト（業務フロー含む）
+tools/oh_ai_prompt.md
+
+# プロジェクト内部メモ・AI設定
+CLAUDE.md
+.claude/
+
+# 環境変数（APIキー等が入る可能性）
+.env
+.env.*
+!.env*.example
+
+# バックアップファイル
+*.bak
+*.backup
+*~
+
+# Macの隠しファイル（全階層）
+**/.DS_Store
