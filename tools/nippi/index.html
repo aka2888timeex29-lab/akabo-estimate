@@ -1190,7 +1190,11 @@ function printTripRecord(id) {
 
 // ===== 日付ユーティリティ =====
 function today() {
-  return new Date().toISOString().split('T')[0];
+  const n = new Date();
+  const y = n.getFullYear();
+  const m = String(n.getMonth() + 1).padStart(2, '0');
+  const d = String(n.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 function formatDate(d) {
   if (!d) return '-';
