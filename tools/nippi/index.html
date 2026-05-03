@@ -596,6 +596,43 @@
     .trip-type-badge.MTG        { background: #F3E5F5; color: #6A1B9A; }
     .trip-type-badge.赤帽組合   { background: #FFEBEE; color: #C62828; }
     .trip-type-badge.cal        { background: #F1F8E9; color: #558B2F; }
+
+    /* 整備記録 */
+    .maint-summary {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--border);
+    }
+    .maint-summary.warn   { border-color: var(--orange); background: var(--orange-pale); }
+    .maint-summary.danger { border-color: var(--red);    background: var(--red-pale); }
+    .maint-summary .ms-title  { font-size: 12px; color: var(--text-mid); font-weight: 700; margin-bottom: 6px; }
+    .maint-summary .ms-main   { font-size: 16px; font-weight: 700; color: var(--text); }
+    .maint-summary .ms-sub    { font-size: 11.5px; color: var(--text-mid); margin-top: 4px; }
+    .maint-summary.warn   .ms-main { color: var(--orange); }
+    .maint-summary.danger .ms-main { color: var(--red); }
+
+    .maint-item {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .maint-item .m-left  { flex: 1; }
+    .maint-item .m-type  { font-size: 13px; font-weight: 700; }
+    .maint-item .m-meta  { font-size: 11.5px; color: var(--text-mid); margin-top: 2px; }
+    .maint-item .m-memo  { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+    .maint-item .m-right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .maint-item .m-odo   { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .maint-item .m-edit  {
+      background: white; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text-mid); font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -618,9 +655,10 @@
 
 <!-- タブナビ -->
 <div class="tab-nav">
-  <button class="tab-btn active" onclick="switchTab('today')">🚗 今日の運行</button>
-  <button class="tab-btn" onclick="switchTab('docs')">📄 書類管理</button>
+  <button class="tab-btn active" onclick="switchTab('today')">🚗 今日</button>
+  <button class="tab-btn" onclick="switchTab('docs')">📄 書類</button>
   <button class="tab-btn" onclick="switchTab('history')">📊 履歴</button>
+  <button class="tab-btn" onclick="switchTab('maintenance')">🔧 整備</button>
 </div>
 
 <!-- ===== 今日の運行 ===== -->
@@ -737,6 +775,68 @@
     <p class="backup-note">エクスポートで全データをJSON保存。機種変更やデータ消失時にインポートで復元できます。</p>
   </div>
 
+</div>
+
+<!-- ===== 整備記録 ===== -->
+<div id="tab-maintenance" class="tab-content">
+
+  <!-- 次回交換目安サマリー -->
+  <div id="maintSummary"></div>
+
+  <!-- 整備履歴一覧 -->
+  <div id="maintList"></div>
+
+  <!-- 整備追加 -->
+  <button class="add-btn" onclick="openMaintModal()">＋ 整備記録を追加</button>
+
+</div>
+
+<!-- ===== 整備モーダル ===== -->
+<div class="modal-overlay" id="maintModal">
+  <div class="modal">
+    <h3 id="maintModalTitle">🔧 整備記録を追加</h3>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>日付</label>
+        <input type="date" id="m_date">
+      </div>
+      <div class="form-group">
+        <label>整備内容</label>
+        <select id="m_type" onchange="onMaintTypeChange()">
+          <option value="オイル交換">オイル交換</option>
+          <option value="エレメント交換">エレメント交換</option>
+          <option value="オイル＋エレメント">オイル＋エレメント</option>
+          <option value="タイヤ交換">タイヤ交換</option>
+          <option value="バッテリー交換">バッテリー交換</option>
+          <option value="車検">車検</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>ODOメーター</label>
+        <input type="number" id="m_odo" placeholder="例：181017" oninput="onMaintOdoChange()">
+      </div>
+      <div class="form-group">
+        <label>次回目安ODO</label>
+        <input type="number" id="m_nextOdo" placeholder="任意">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea id="m_memo" placeholder="例：純正オイル使用、ディーラーにて" rows="2"></textarea>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeMaintModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveMaint()">保存</button>
+    </div>
+    <button id="maintDeleteBtn" class="btn-delete" onclick="deleteMaint()" style="display:none;">🗑 削除</button>
+  </div>
 </div>
 
 <!-- ===== 案件モーダル ===== -->
@@ -1008,11 +1108,12 @@ async function loadFromCalendar() {
 
 // ===== データ管理 =====
 const STORAGE_KEY = 'akaboTimeNippi_v1';
-let data = { trips: [], docs: [], inspections: {}, alcoholChecks: {} };
+let data = { trips: [], docs: [], inspections: {}, alcoholChecks: {}, maintenances: [] };
 
 function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) data = JSON.parse(saved);
+  if (!data.maintenances) data.maintenances = [];
 }
 
 // 既存の大きな画像データを自動圧縮（初回のみ実行）
@@ -1266,6 +1367,7 @@ function switchTab(tab) {
   event.target.classList.add('active');
   if (tab === 'history') renderHistory();
   if (tab === 'docs') renderDocs();
+  if (tab === 'maintenance') renderMaintenance();
 }
 
 // ===== 日常点検 =====
@@ -1728,6 +1830,154 @@ function renderHistory() {
   }).join('');
 }
 
+// ===== 整備記録 =====
+let editingMaintId = null;
+
+function openMaintModal(id) {
+  editingMaintId = id || null;
+  if (id) {
+    const m = data.maintenances.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('maintModalTitle').textContent = '✏️ 整備記録を編集';
+    document.getElementById('m_date').value    = m.date || today();
+    document.getElementById('m_type').value    = m.type || 'オイル交換';
+    document.getElementById('m_odo').value     = m.odo || '';
+    document.getElementById('m_nextOdo').value = m.nextOdo || '';
+    document.getElementById('m_memo').value    = m.memo || '';
+    document.getElementById('maintDeleteBtn').style.display = 'block';
+  } else {
+    document.getElementById('maintModalTitle').textContent = '🔧 整備記録を追加';
+    document.getElementById('m_date').value    = today();
+    document.getElementById('m_type').value    = 'オイル交換';
+    document.getElementById('m_odo').value     = '';
+    document.getElementById('m_nextOdo').value = '';
+    document.getElementById('m_memo').value    = '';
+    document.getElementById('maintDeleteBtn').style.display = 'none';
+  }
+  document.getElementById('maintModal').classList.add('open');
+}
+
+function closeMaintModal() {
+  document.getElementById('maintModal').classList.remove('open');
+  editingMaintId = null;
+}
+
+function onMaintTypeChange() {
+  // オイル系を選んだ時だけODOから+5000を自動入力
+  onMaintOdoChange();
+}
+function onMaintOdoChange() {
+  const type = document.getElementById('m_type').value;
+  const odo  = parseInt(document.getElementById('m_odo').value) || 0;
+  const nextEl = document.getElementById('m_nextOdo');
+  const isOilType = (type === 'オイル交換' || type === 'エレメント交換' || type === 'オイル＋エレメント');
+  // 既に手入力されている場合は上書きしない
+  if (isOilType && odo > 0 && !nextEl.value) {
+    nextEl.value = odo + 5000;
+  }
+}
+
+function saveMaint() {
+  const date    = document.getElementById('m_date').value;
+  const type    = document.getElementById('m_type').value;
+  const odo     = parseInt(document.getElementById('m_odo').value) || 0;
+  const nextOdo = parseInt(document.getElementById('m_nextOdo').value) || null;
+  const memo    = document.getElementById('m_memo').value.trim();
+
+  if (!date)  { alert('日付を入力してください'); return; }
+  if (!odo)   { alert('ODOメーターを入力してください'); return; }
+
+  if (editingMaintId) {
+    const m = data.maintenances.find(x => x.id === editingMaintId);
+    if (m) {
+      m.date = date; m.type = type; m.odo = odo; m.nextOdo = nextOdo; m.memo = memo;
+    }
+  } else {
+    data.maintenances.push({
+      id: Date.now(),
+      date: date, type: type, odo: odo, nextOdo: nextOdo, memo: memo
+    });
+  }
+  saveData();
+  closeMaintModal();
+  renderMaintenance();
+}
+
+function deleteMaint() {
+  if (!editingMaintId) return;
+  if (!confirm('この整備記録を削除しますか？')) return;
+  data.maintenances = data.maintenances.filter(x => x.id !== editingMaintId);
+  saveData();
+  closeMaintModal();
+  renderMaintenance();
+}
+
+function getCurrentOdo() {
+  // 最新の運行記録のendOdoを「現在のODO」として使う
+  const completed = data.trips.filter(t => t.endOdo).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (completed.length > 0 && completed[0].endOdo) return completed[0].endOdo;
+  // なければ整備記録の最新ODO
+  if (data.maintenances.length > 0) {
+    const sorted = [...data.maintenances].sort((a, b) => b.odo - a.odo);
+    return sorted[0].odo;
+  }
+  return null;
+}
+
+function renderMaintenance() {
+  const sumEl = document.getElementById('maintSummary');
+  const list  = data.maintenances || [];
+
+  // 次回オイル交換目安サマリー
+  const oilTypes = ['オイル交換', 'エレメント交換', 'オイル＋エレメント'];
+  const oilMaints = list.filter(m => oilTypes.indexOf(m.type) >= 0 && m.nextOdo);
+  if (oilMaints.length > 0) {
+    const latest = [...oilMaints].sort((a, b) => b.odo - a.odo)[0];
+    const currentOdo = getCurrentOdo();
+    let cls = '', subText = '';
+    if (currentOdo) {
+      const remain = latest.nextOdo - currentOdo;
+      if (remain <= 500)  cls = 'danger';
+      else if (remain <= 1000) cls = 'warn';
+      subText = '現在ODO ' + currentOdo.toLocaleString() + 'km ／ 残り '
+              + (remain >= 0 ? remain.toLocaleString() + 'km' : '⚠️ ' + Math.abs(remain).toLocaleString() + 'km 超過');
+    } else {
+      subText = '前回 ' + formatDate(latest.date) + '（ODO ' + latest.odo.toLocaleString() + 'km）';
+    }
+    sumEl.innerHTML = '<div class="maint-summary ' + cls + '">'
+      + '<div class="ms-title">🛢 次回オイル交換目安</div>'
+      + '<div class="ms-main">ODO ' + latest.nextOdo.toLocaleString() + 'km</div>'
+      + '<div class="ms-sub">' + subText + '</div>'
+      + '</div>';
+  } else {
+    sumEl.innerHTML = '';
+  }
+
+  // 履歴一覧
+  const listEl = document.getElementById('maintList');
+  if (list.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><div class="emoji">🔧</div><p>整備記録がまだありません<br>下のボタンから追加してください</p></div>';
+    return;
+  }
+  const sorted = [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.odo - a.odo);
+  listEl.innerHTML = sorted.map(m => {
+    const nextHtml = m.nextOdo ? '<div class="m-meta">次回目安：' + m.nextOdo.toLocaleString() + 'km</div>' : '';
+    const memoHtml = m.memo ? '<div class="m-memo">' + m.memo + '</div>' : '';
+    return '<div class="maint-item">'
+      + '<div class="m-left">'
+      +   '<div class="m-type">🔧 ' + m.type + '</div>'
+      +   '<div class="m-meta">' + formatDate(m.date) + '</div>'
+      +   nextHtml
+      +   memoHtml
+      + '</div>'
+      + '<div class="m-right">'
+      +   '<div class="m-odo">' + m.odo.toLocaleString() + 'km</div>'
+      +   '<button class="m-edit" onclick="openMaintModal(' + m.id + ')">✏️ 編集</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
 // ===== Now ボタン =====
 function setNow(fieldId) {
   document.getElementById(fieldId).value = nowTime();
@@ -1776,6 +2026,7 @@ renderDocs();
 loadBizInfo();
 historyMonth = new Date();
 renderHistory();
+renderMaintenance();
 </script>
 </body>
 </html>
