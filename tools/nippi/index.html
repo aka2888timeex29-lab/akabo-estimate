@@ -774,6 +774,12 @@
 
   <div id="historyList"></div>
 
+  <!-- CSV出力 -->
+  <div style="margin-bottom:12px;">
+    <button class="add-btn" style="background:linear-gradient(135deg, #F57F17 0%, #FFB300 100%);" onclick="exportCSV()">📊 この月のCSVを出力</button>
+    <p style="font-size:11px; color:var(--text-light); text-align:center; margin-top:6px;">確定申告・税理士への提出用データ</p>
+  </div>
+
   <!-- バックアップ -->
   <div class="backup-section">
     <h3>💾 データバックアップ</h3>
@@ -1161,6 +1167,78 @@ function saveData() {
     }
     console.error('saveData error:', e);
   }
+}
+
+// ===== CSV出力（月次・確定申告用） =====
+function exportCSV() {
+  const y = historyMonth.getFullYear(), m = historyMonth.getMonth() + 1;
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr));
+
+  if (trips.length === 0) {
+    alert('この月のデータがありません');
+    return;
+  }
+
+  // BOM付きUTF-8（Excelで文字化けしない）
+  const BOM = '﻿';
+  const headers = [
+    '日付','顧客名','仕事種別','出発地','目的地',
+    '出発時刻','到着時刻','出発ODO','到着ODO','走行距離(km)',
+    '稼働時間','売上金額','高速代','給油金額','メモ','ステータス'
+  ];
+
+  const rows = [...trips].sort((a,b) => a.date.localeCompare(b.date)).map(t => {
+    const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : '';
+    const dur = calcDuration(t.startTime, t.endTime) || '';
+    return [
+      t.date || '',
+      csvEscape(t.client || ''),
+      t.type || '',
+      csvEscape(t.from || ''),
+      csvEscape(t.to || ''),
+      t.startTime || '',
+      t.endTime || '',
+      t.startOdo || '',
+      t.endOdo || '',
+      km,
+      dur,
+      t.revenue || '',
+      t.toll || '',
+      t.fuel || '',
+      csvEscape(t.memo || ''),
+      { planned:'予定', 'in-progress':'運行中', completed:'完了' }[t.status] || t.status || ''
+    ].join(',');
+  });
+
+  // 集計行
+  const totalRevenue = trips.reduce((s,t) => s + (t.revenue || 0), 0);
+  const totalToll    = trips.reduce((s,t) => s + (t.toll || 0), 0);
+  const totalFuel    = trips.reduce((s,t) => s + (t.fuel || 0), 0);
+  const totalKm      = trips.reduce((s,t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const completedCount = trips.filter(t => t.status === 'completed').length;
+
+  rows.push(''); // 空行
+  rows.push(`合計,${completedCount}件完了（全${trips.length}件）,,,,,,,,${totalKm},${totalRevenue},${totalToll},${totalFuel},,`);
+  rows.push(`粗利益,,,,,,,,,,,,,,${totalRevenue - totalToll - totalFuel},`);
+
+  const csv = BOM + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `運行記録_${y}年${m}月.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  alert(`📊 ${y}年${m}月のCSVを保存しました（${trips.length}件）`);
+}
+
+function csvEscape(str) {
+  if (!str) return '';
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
 }
 
 // ===== バックアップ（エクスポート/インポート） =====
