@@ -818,11 +818,11 @@
     <div class="form-row">
       <div class="form-group">
         <label>ODOメーター</label>
-        <input type="number" id="m_odo" placeholder="例：181017" oninput="onMaintOdoChange()">
+        <input type="number" id="m_odo" placeholder="例：181017" inputmode="numeric" pattern="[0-9]*" oninput="onMaintOdoChange()">
       </div>
       <div class="form-group">
         <label>次回目安ODO</label>
-        <input type="number" id="m_nextOdo" placeholder="任意">
+        <input type="number" id="m_nextOdo" placeholder="任意" inputmode="numeric" pattern="[0-9]*">
       </div>
     </div>
 
@@ -888,7 +888,7 @@
         </div>
         <div class="form-group">
           <label>ODOメーター（出発）</label>
-          <input type="number" id="f_startOdo" placeholder="例：12345">
+          <input type="number" id="f_startOdo" placeholder="例：12345" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
     </div>
@@ -905,7 +905,7 @@
         </div>
         <div class="form-group">
           <label>ODOメーター（到着）</label>
-          <input type="number" id="f_endOdo" placeholder="例：12398">
+          <input type="number" id="f_endOdo" placeholder="例：12398" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
     </div>
@@ -946,11 +946,11 @@
       <div class="form-row">
         <div class="form-group">
           <label>高速代（円）</label>
-          <input type="number" id="f_toll" placeholder="例：2200">
+          <input type="number" id="f_toll" placeholder="例：2200" inputmode="numeric" pattern="[0-9]*">
         </div>
         <div class="form-group">
           <label>給油金額（円）</label>
-          <input type="number" id="f_fuel" placeholder="例：3000">
+          <input type="number" id="f_fuel" placeholder="例：3000" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
     </div>
