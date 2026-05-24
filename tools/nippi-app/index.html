@@ -1068,6 +1068,39 @@
   <img id="photoModalImg" src="" alt="書類写真">
 </div>
 
+<!-- ようこそモーダル（初回起動時） -->
+<div class="modal-overlay" id="welcomeModal">
+  <div class="modal" style="max-width:440px;">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div style="font-size:48px;">🚚</div>
+      <h2 style="font-size:22px; color:var(--primary); margin-top:8px;">nippi へようこそ</h2>
+      <p style="font-size:13px; color:var(--text-mid); margin-top:6px;">軽貨物ドライバーのための運行管理アプリ</p>
+    </div>
+
+    <div style="background:var(--primary-pale); border-radius:12px; padding:14px; margin-bottom:18px;">
+      <div style="font-size:12px; font-weight:700; color:var(--primary); margin-bottom:8px;">✨ このアプリでできること</div>
+      <ul style="list-style:none; padding:0; font-size:12.5px; line-height:1.9; color:var(--text);">
+        <li>📋 日々の運行日報（法令対応フォーマット）</li>
+        <li>💰 売上・経費・粗利益の月次集計</li>
+        <li>🔧 車両整備・書類期限の管理</li>
+        <li>📊 CSV出力（確定申告用）</li>
+        <li>📄 PDF出力（運輸局・事故報告用）</li>
+      </ul>
+    </div>
+
+    <div class="form-group">
+      <label>🏢 まず、あなたの屋号 / 事業者名を教えてください</label>
+      <input type="text" id="welcomeBizName" placeholder="例：スマイル急便 山田" style="font-size:16px;">
+      <p style="font-size:11px; color:var(--text-light); margin-top:6px;">後で「書類」タブから変更できます</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="skipWelcome()">後で設定する</button>
+      <button class="btn-save" onclick="completeWelcome()">📋 はじめる</button>
+    </div>
+  </div>
+</div>
+
 <!-- 隠しファイル入力（写真更新用） -->
 <input type="file" id="updatePhotoInput" accept="image/*,application/pdf,.pdf"
        class="hidden-input" onchange="updateDocPhoto(this)">
@@ -2260,32 +2293,38 @@ function updateDocTitle() {
 }
 
 // ===== 初回ウェルカム＆屋号入力 =====
+const WELCOME_DONE_KEY = 'nippi_welcome_done';
+
 function showFirstRunWelcome() {
-  // 既に屋号が入力済みなら何もしない
+  // 既に表示済み、または屋号が入力済みなら何もしない
+  if (localStorage.getItem(WELCOME_DONE_KEY)) return;
   if (data.bizInfo && data.bizInfo.name) return;
-  // ようこそモーダル表示
+  document.getElementById('welcomeModal').classList.add('open');
   setTimeout(() => {
-    const name = prompt(
-      '🚚 nippi へようこそ！\n\n' +
-      '軽貨物ドライバーのための運行管理アプリです。\n' +
-      '\n以下を記録できます：\n' +
-      '・日々の運行日報（法令対応）\n' +
-      '・売上・経費・粗利益\n' +
-      '・車両整備・書類期限管理\n' +
-      '・CSV出力（確定申告）/ PDF出力（運輸局報告）\n' +
-      '\nまず、あなたの屋号 / 事業者名を入力してください：',
-      ''
-    );
-    if (name && name.trim()) {
-      data.bizInfo = data.bizInfo || {};
-      data.bizInfo.name = name.trim();
-      saveData();
-      document.getElementById('biz_name').value = name.trim();
-      updateHeaderBizName();
-      updateDocTitle();
-      alert('✅ ' + name.trim() + ' を登録しました！\n書類タブで他の事業者情報も登録できます。');
-    }
+    const input = document.getElementById('welcomeBizName');
+    if (input) input.focus();
   }, 300);
+}
+
+function completeWelcome() {
+  const name = document.getElementById('welcomeBizName').value.trim();
+  if (!name) {
+    alert('屋号を入力してください。今すぐ決まらない場合は「後で設定する」を選んでください');
+    return;
+  }
+  data.bizInfo = data.bizInfo || {};
+  data.bizInfo.name = name;
+  saveData();
+  document.getElementById('biz_name').value = name;
+  updateHeaderBizName();
+  updateDocTitle();
+  localStorage.setItem(WELCOME_DONE_KEY, '1');
+  document.getElementById('welcomeModal').classList.remove('open');
+}
+
+function skipWelcome() {
+  localStorage.setItem(WELCOME_DONE_KEY, '1');
+  document.getElementById('welcomeModal').classList.remove('open');
 }
 
 // ===== 初期化 =====
