@@ -774,11 +774,12 @@
 
   <div id="historyList"></div>
 
-  <!-- CSV出力 -->
-  <div style="margin-bottom:12px;">
-    <button class="add-btn" style="background:linear-gradient(135deg, #F57F17 0%, #FFB300 100%);" onclick="exportCSV()">📊 この月のCSVを出力</button>
-    <p style="font-size:11px; color:var(--text-light); text-align:center; margin-top:6px;">確定申告・税理士への提出用データ</p>
+  <!-- データ出力 -->
+  <div style="display:flex; gap:8px; margin-bottom:12px;">
+    <button class="add-btn" style="flex:1; background:linear-gradient(135deg, #F57F17 0%, #FFB300 100%); margin-bottom:0;" onclick="exportCSV()">📊 CSV出力</button>
+    <button class="add-btn" style="flex:1; background:linear-gradient(135deg, #1565C0 0%, #42A5F5 100%); margin-bottom:0;" onclick="exportMonthlyPDF()">📄 PDF出力</button>
   </div>
+  <p style="font-size:11px; color:var(--text-light); text-align:center; margin-bottom:12px;">CSV＝確定申告用 ／ PDF＝運輸局・事故報告用</p>
 
   <!-- バックアップ -->
   <div class="backup-section">
@@ -1240,6 +1241,183 @@ function csvEscape(str) {
   }
   return str;
 }
+
+// ===== 月次運行記録 PDF出力（運輸局・事故報告用） =====
+function exportMonthlyPDF() {
+  const y = historyMonth.getFullYear(), m = historyMonth.getMonth() + 1;
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr))
+    .sort((a,b) => (a.date + (a.startTime||'')).localeCompare(b.date + (b.startTime||'')));
+
+  if (trips.length === 0) {
+    alert('この月のデータがありません');
+    return;
+  }
+
+  const biz = data.bizInfo || {};
+  const totalRevenue = trips.reduce((s,t) => s + (t.revenue || 0), 0);
+  const totalKm = trips.reduce((s,t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const totalToll = trips.reduce((s,t) => s + (t.toll || 0), 0);
+  const totalFuel = trips.reduce((s,t) => s + (t.fuel || 0), 0);
+  const completed = trips.filter(t => t.status === 'completed').length;
+
+  // 日付を和暦に
+  function toReiwa(dateStr) {
+    if (!dateStr) return '';
+    const [yy,mm,dd] = dateStr.split('-');
+    return `R${parseInt(yy)-2018}.${parseInt(mm)}.${parseInt(dd)}`;
+  }
+
+  // 日別にグループ化
+  const byDate = {};
+  trips.forEach(t => {
+    if (!byDate[t.date]) byDate[t.date] = [];
+    byDate[t.date].push(t);
+  });
+
+  const tripRows = trips.map((t, i) => {
+    const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : '';
+    const dur = calcDuration(t.startTime, t.endTime) || '';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${t.date ? t.date.slice(5).replace('-','/') : ''}</td>
+      <td style="text-align:left;">${esc(t.client || '')}</td>
+      <td>${esc(t.type || '')}</td>
+      <td style="text-align:left;">${esc(t.from || '')} → ${esc(t.to || '')}</td>
+      <td>${t.startTime || ''}</td>
+      <td>${t.endTime || ''}</td>
+      <td>${dur}</td>
+      <td>${t.startOdo ? t.startOdo.toLocaleString() : ''}</td>
+      <td>${t.endOdo ? t.endOdo.toLocaleString() : ''}</td>
+      <td>${km ? km.toLocaleString() : ''}</td>
+      <td style="text-align:right;">${t.revenue ? '¥'+t.revenue.toLocaleString() : ''}</td>
+      <td style="text-align:right;">${t.toll ? '¥'+t.toll.toLocaleString() : ''}</td>
+      <td style="text-align:right;">${t.fuel ? '¥'+t.fuel.toLocaleString() : ''}</td>
+      <td style="text-align:left; font-size:8px;">${esc(t.memo || '')}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>運行記録簿 ${y}年${m}月</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Hiragino Sans','Noto Sans JP',sans-serif; font-size:10px; color:#222; line-height:1.4; }
+  .header-block { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; border-bottom:2px solid #333; padding-bottom:8px; }
+  .header-block h1 { font-size:18px; font-weight:700; }
+  .header-block .period { font-size:13px; margin-top:4px; }
+  .biz-info { text-align:right; font-size:10px; line-height:1.6; }
+  .biz-info .name { font-size:13px; font-weight:700; }
+  .summary-row { display:flex; gap:12px; margin-bottom:10px; }
+  .summary-item { flex:1; border:1px solid #999; border-radius:4px; padding:6px 8px; text-align:center; }
+  .summary-item .label { font-size:9px; color:#666; }
+  .summary-item .val { font-size:14px; font-weight:700; }
+  .summary-item.revenue { border-color:#F57F17; background:#FFFDE7; }
+  .summary-item.revenue .val { color:#F57F17; }
+  .summary-item.profit { border-color:#2E7D32; background:#E8F5E9; }
+  .summary-item.profit .val { color:#2E7D32; }
+  table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+  th, td { border:1px solid #999; padding:3px 4px; text-align:center; font-size:8.5px; }
+  th { background:#f0f0f0; font-weight:700; font-size:8px; white-space:nowrap; }
+  tr:nth-child(even) td { background:#fafafa; }
+  .total-row td { background:#f0f0f0; font-weight:700; }
+  .footer { margin-top:12px; display:flex; justify-content:space-between; font-size:9px; color:#666; }
+  .stamp-area { display:flex; gap:16px; margin-top:10px; }
+  .stamp-box { width:70px; height:70px; border:1px solid #999; text-align:center; font-size:9px; padding-top:4px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<div class="header-block">
+  <div>
+    <h1>運行記録簿</h1>
+    <div class="period">${y}年${m}月（${toReiwa(y+'-'+String(m).padStart(2,'0')+'-01').split('.').slice(0,2).join('.')}）</div>
+  </div>
+  <div class="biz-info">
+    <div class="name">${esc(biz.driver || '（事業者名未設定）')}</div>
+    ${biz.delivery ? '<div>届出番号：'+esc(biz.delivery)+'</div>' : ''}
+    ${biz.invoice ? '<div>インボイス：'+esc(biz.invoice)+'</div>' : ''}
+    ${biz.kumiai ? '<div>組合員番号：'+esc(biz.kumiai)+'</div>' : ''}
+    ${biz.plate ? '<div>車両：'+esc(biz.plate)+'</div>' : ''}
+  </div>
+</div>
+
+<div class="summary-row">
+  <div class="summary-item revenue">
+    <div class="label">売上合計</div>
+    <div class="val">¥${totalRevenue.toLocaleString()}</div>
+  </div>
+  <div class="summary-item profit">
+    <div class="label">粗利益</div>
+    <div class="val">¥${(totalRevenue - totalToll - totalFuel).toLocaleString()}</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">完了案件</div>
+    <div class="val">${completed}件</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">総走行距離</div>
+    <div class="val">${totalKm.toLocaleString()}km</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">高速代計</div>
+    <div class="val">¥${totalToll.toLocaleString()}</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">給油計</div>
+    <div class="val">¥${totalFuel.toLocaleString()}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>No</th><th>日付</th><th>顧客名・案件名</th><th>種別</th><th>ルート</th>
+      <th>出発</th><th>到着</th><th>稼働</th>
+      <th>出発ODO</th><th>到着ODO</th><th>距離</th>
+      <th>売上</th><th>高速代</th><th>給油</th><th>備考</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${tripRows}
+    <tr class="total-row">
+      <td colspan="2">合計</td>
+      <td colspan="3">${completed}件完了 / 全${trips.length}件</td>
+      <td colspan="5"></td>
+      <td>${totalKm.toLocaleString()}</td>
+      <td style="text-align:right;">¥${totalRevenue.toLocaleString()}</td>
+      <td style="text-align:right;">¥${totalToll.toLocaleString()}</td>
+      <td style="text-align:right;">¥${totalFuel.toLocaleString()}</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="stamp-area">
+  <div class="stamp-box">管理者</div>
+  <div class="stamp-box">運転者</div>
+  <div class="stamp-box">確認者</div>
+</div>
+
+<div class="footer">
+  <div>出力日：${new Date().toLocaleDateString('ja-JP')}</div>
+  <div>本書は運行管理システムにより自動生成されました</div>
+</div>
+
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ===== バックアップ（エクスポート/インポート） =====
 function exportData() {
