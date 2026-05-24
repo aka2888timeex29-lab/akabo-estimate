@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="nippi">
+  <meta name="theme-color" content="#1976D2">
+  <title>nippi - 軽貨物の運行管理</title>
+  <meta name="description" content="軽貨物ドライバーのための運行日報・売上管理・確定申告対応ツール">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9A%9A%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:      #1976D2;
+      --primary-soft: #42A5F5;
+      --primary-pale: #E3F2FD;
+      --primary-glow: rgba(25,118,210,0.18);
+      --bg:           #F4F8FB;
+      --card-bg:      #FFFFFF;
+      --border:       #BBDEFB;
+      --text:         #1A2438;
+      --text-mid:     #455A7C;
+      --text-light:   #90CAF9;
+      --shadow:       rgba(25,118,210,0.10);
+      --red:          #C62828;
+      --red-pale:     #FFEBEE;
+      --orange:       #E65100;
+      --orange-pale:  #FFF3E0;
+      --blue:         #1565C0;
+      --blue-pale:    #E3F2FD;
+      --green:        #66BB6A;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; }
+    input, select, button, textarea { -webkit-appearance: none; font-size: 16px; font-family: inherit; }
+    body {
+      font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 80px;
+    }
+
+    /* ヘッダー */
+    .header {
+      background: linear-gradient(135deg, #0D47A1 0%, #42A5F5 100%);
+      color: white;
+      padding: 12px 16px 10px;
+      text-align: center;
+      box-shadow: 0 2px 10px var(--primary-glow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .header-inner img.logo-mark { height: 52px; width: auto; }
+    .header-title h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-align: left; }
+    .header-title .subtitle { font-size: 11px; opacity: 0.88; letter-spacing: 0.06em; text-align: left; margin-top: 2px; }
+    .header-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .header .date { font-size: 11.5px; opacity: 0.85; }
+    .reload-btn {
+      background: rgba(255,255,255,0.25);
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+    }
+    .reload-btn:active { background: rgba(255,255,255,0.45); }
+    .header-plate {
+      font-size: 12px;
+      font-weight: 700;
+      opacity: 0.92;
+      background: rgba(255,255,255,0.2);
+      padding: 2px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    /* タブナビ */
+    .tab-nav {
+      display: flex;
+      background: white;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 62px;
+      z-index: 99;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 4px;
+      border: none;
+      background: white;
+      color: var(--text-mid);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all .18s;
+    }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* コンテンツ */
+    .tab-content { display: none; padding: 14px; }
+    .tab-content.active { display: block; }
+
+    /* カード */
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .card h2 {
+      font-size: 13px;
+      color: var(--text-mid);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1.5px solid var(--border);
+      font-weight: 700;
+    }
+
+    /* 点検ボタン */
+    .inspection-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: white;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      color: var(--text-mid);
+    }
+    .inspection-btn.done {
+      background: var(--primary-pale);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .alcohol-btn {
+      border-color: #FFCDD2;
+      color: var(--red);
+    }
+    .alcohol-btn.done {
+      background: #E8F5E9;
+      border-color: #66BB6A;
+      color: #2E7D32;
+    }
+
+    /* 案件カード */
+    .trip-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px var(--shadow);
+      border: 1.5px solid var(--border);
+    }
+    .trip-card.in-progress { border-color: var(--orange); background: var(--orange-pale); }
+    .trip-card.completed   { border-color: var(--primary); background: var(--primary-pale); }
+
+    .trip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .trip-client { font-size: 14px; font-weight: 700; }
+    .trip-status {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: #eee;
+      color: #666;
+    }
+    .trip-status.in-progress { background: var(--orange); color: white; }
+    .trip-status.completed   { background: var(--primary); color: white; }
+
+    .trip-route {
+      font-size: 12.5px;
+      color: var(--text-mid);
+      margin-bottom: 10px;
+    }
+    .trip-times {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .time-box {
+      background: #f8f8f8;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 11.5px;
+    }
+    .time-box .label { color: var(--text-light); font-size: 10.5px; margin-bottom: 3px; }
+    .time-box .value { font-weight: 700; font-size: 14px; color: var(--text); }
+    .time-box .odo   { font-size: 11px; color: var(--text-mid); margin-top: 2px; }
+
+    .trip-calc {
+      display: flex;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-mid);
+      margin-bottom: 10px;
+    }
+    .trip-calc span { background: var(--primary-pale); padding: 3px 8px; border-radius: 6px; color: var(--primary); font-weight: 700; }
+
+    .trip-actions { display: flex; gap: 8px; }
+    .btn-start {
+      flex: 1; padding: 10px; border: none; border-radius: 10px;
+      background: var(--orange); color: white; font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+    .btn-end {
+      flex: 1; padding: 10px; border: none; border-radius: 10px;
+      background: var(--primary); color: white; font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+    .btn-edit {
+      padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      background: white; color: var(--text-mid); font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+    .btn-delete {
+      padding: 10px 14px; border: 1.5px solid #ffcdd2; border-radius: 10px;
+      background: white; color: var(--red); font-size: 13px;
+      font-weight: 700; cursor: pointer;
+    }
+
+    /* 追加ボタン */
+    .add-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    /* モーダル */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      overflow-y: auto;
+      padding: 20px 14px;
+    }
+    .modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+    .modal {
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      width: 100%;
+      max-width: 480px;
+      margin: auto;
+    }
+    .modal h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1.5px solid var(--border);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 11.5px;
+      color: var(--text-mid);
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text);
+      background: white;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--primary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .time-input-group { display: flex; gap: 8px; align-items: flex-end; }
+    .time-input-group input { flex: 1; }
+    .now-btn {
+      padding: 11px 12px;
+      background: var(--primary-pale);
+      border: 1.5px solid var(--primary);
+      border-radius: 10px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-cancel {
+      flex: 1; padding: 13px; border: 1.5px solid var(--border);
+      border-radius: 12px; background: white; color: var(--text-mid);
+      font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .btn-save {
+      flex: 2; padding: 13px; border: none;
+      border-radius: 12px; background: var(--primary); color: white;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+
+    /* 書類管理 */
+    .doc-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px var(--shadow);
+      border: 1.5px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .doc-card.alert-red   { border-color: var(--red);    background: var(--red-pale); }
+    .doc-card.alert-orange{ border-color: var(--orange); background: var(--orange-pale); }
+
+    .doc-photo {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .doc-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+    .doc-info { flex: 1; min-width: 0; }
+    .doc-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .doc-expiry { font-size: 12px; color: var(--text-mid); }
+    .doc-days {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .doc-days.safe   { background: var(--primary-pale); color: var(--primary); }
+    .doc-days.warn   { background: var(--orange-pale);  color: var(--orange); }
+    .doc-days.danger { background: var(--red-pale);     color: var(--red); }
+    .doc-days.expired{ background: #f5f5f5; color: #999; }
+
+    .doc-edit-btn {
+      padding: 6px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      color: var(--text-mid);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* 写真拡大モーダル */
+    .photo-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-modal-overlay.open { display: flex; }
+    .photo-modal-overlay img {
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 12px;
+    }
+    .photo-modal-close {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 履歴 */
+    .month-selector {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--border);
+    }
+    .month-nav {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--primary);
+      padding: 4px 8px;
+    }
+    .month-label { font-size: 15px; font-weight: 700; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .summary-box {
+      background: white;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      border: 1.5px solid var(--border);
+    }
+    .summary-box .s-label { font-size: 11px; color: var(--text-mid); font-weight: 700; margin-bottom: 4px; }
+    .summary-box .s-value { font-size: 22px; font-weight: 700; color: var(--primary); }
+    .summary-box .s-unit  { font-size: 11px; color: var(--text-mid); }
+
+    .history-item {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .history-item .h-left .h-client { font-size: 13px; font-weight: 700; }
+    .history-item .h-left .h-route  { font-size: 11.5px; color: var(--text-mid); }
+    .history-item .h-right { text-align: right; }
+    .history-item .h-right .h-km    { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .history-item .h-right .h-time  { font-size: 11px; color: var(--text-mid); }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+    .empty-state .emoji { font-size: 40px; margin-bottom: 10px; }
+    .empty-state p { font-size: 13px; }
+
+    /* バックアップセクション */
+    .backup-section {
+      margin-top: 24px;
+      padding: 16px;
+      background: #F5F5F0;
+      border-radius: 12px;
+      border: 1.5px dashed #CCC8C0;
+    }
+    .backup-section h3 {
+      font-size: 14px;
+      margin: 0 0 10px 0;
+      color: var(--text);
+    }
+    .backup-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .backup-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .backup-btn.export {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .backup-btn.import {
+      background: #fff;
+      color: var(--text);
+    }
+    .backup-btn:active { opacity: 0.8; }
+    .backup-note {
+      font-size: 11px;
+      color: var(--text-light);
+      margin: 8px 0 0 0;
+      line-height: 1.6;
+    }
+
+    /* 隠しファイル入力 */
+    .hidden-input { display: none; }
+
+    /* カレンダー同期バー */
+    .cal-sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: var(--blue-pale);
+      border-bottom: 1.5px solid #BBDEFB;
+    }
+    .cal-sync-btn {
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cal-sync-btn:active { opacity: 0.8; }
+    .cal-sync-btn:disabled { background: #90CAF9; cursor: not-allowed; }
+    .cal-sync-status {
+      font-size: 12px;
+      color: var(--blue);
+      flex: 1;
+    }
+    .cal-sync-status.error { color: var(--red); }
+    .cal-sync-status.success { color: #2E7D32; }
+
+    /* 仕事種別バッジ */
+    .trip-type-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .trip-type-badge.直接取引   { background: #E8F5E9; color: #2E7D32; }
+    .trip-type-badge.プラットフォーム { background: #E3F2FD; color: #1565C0; }
+    .trip-type-badge.下請け     { background: #FFF3E0; color: #E65100; }
+    .trip-type-badge.定期便     { background: #E0F2F1; color: #00695C; }
+    .trip-type-badge.スポット   { background: #FCE4EC; color: #AD1457; }
+    .trip-type-badge.MTG        { background: #F3E5F5; color: #6A1B9A; }
+    .trip-type-badge.cal        { background: #F1F8E9; color: #558B2F; }
+
+    /* 整備記録 */
+    .maint-summary {
+      background: white;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      border: 1.5px solid var(--border);
+    }
+    .maint-summary.warn   { border-color: var(--orange); background: var(--orange-pale); }
+    .maint-summary.danger { border-color: var(--red);    background: var(--red-pale); }
+    .maint-summary .ms-title  { font-size: 12px; color: var(--text-mid); font-weight: 700; margin-bottom: 6px; }
+    .maint-summary .ms-main   { font-size: 16px; font-weight: 700; color: var(--text); }
+    .maint-summary .ms-sub    { font-size: 11.5px; color: var(--text-mid); margin-top: 4px; }
+    .maint-summary.warn   .ms-main { color: var(--orange); }
+    .maint-summary.danger .ms-main { color: var(--red); }
+
+    .maint-item {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border: 1.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .maint-item .m-left  { flex: 1; }
+    .maint-item .m-type  { font-size: 13px; font-weight: 700; }
+    .maint-item .m-meta  { font-size: 11.5px; color: var(--text-mid); margin-top: 2px; }
+    .maint-item .m-memo  { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+    .maint-item .m-right { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .maint-item .m-odo   { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .maint-item .m-edit  {
+      background: white; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--text-mid); font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ヘッダー -->
+<div class="header">
+  <div class="header-inner">
+    <div style="font-size:32px; line-height:1;">🚚</div>
+    <div class="header-title">
+      <h1 id="headerBizName">nippi</h1>
+      <div class="subtitle">📋 運行管理アプリ</div>
+    </div>
+    <button class="reload-btn" onclick="location.reload()" title="リロード">🔄</button>
+  </div>
+  <div class="header-bottom">
+    <div class="date" id="headerDate"></div>
+    <div class="header-plate" id="headerPlate" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- タブナビ -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('today')">🚗 今日</button>
+  <button class="tab-btn" onclick="switchTab('docs')">📄 書類</button>
+  <button class="tab-btn" onclick="switchTab('history')">📊 履歴</button>
+  <button class="tab-btn" onclick="switchTab('maintenance')">🔧 整備</button>
+</div>
+
+<!-- ===== 今日の運行 ===== -->
+<div id="tab-today" class="tab-content active">
+
+  <!-- 日常点検 + アルコール検知 -->
+  <div class="card">
+    <h2>🔍 出発前チェック</h2>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <button class="inspection-btn" id="inspectionBtn" onclick="toggleInspection()">
+        ⬜ 日常点検を完了にする
+      </button>
+      <button class="inspection-btn alcohol-btn" id="alcoholBtn" onclick="toggleAlcohol()">
+        🍺 アルコール検知（未実施）
+      </button>
+    </div>
+  </div>
+
+  <!-- 案件リスト -->
+  <div id="tripList"></div>
+
+  <!-- 案件追加 -->
+  <button class="add-btn" onclick="openTripModal()">＋ 案件を追加</button>
+
+</div>
+
+<!-- ===== 書類管理 ===== -->
+<div id="tab-docs" class="tab-content">
+
+  <!-- 事業者情報 -->
+  <div class="card">
+    <h2>📋 事業者情報</h2>
+    <div class="form-group">
+      <label>🏢 屋号 / 事業者名（ヘッダーに表示）</label>
+      <input type="text" id="biz_name" placeholder="例：スマイル急便 / 山田運送"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>運転者氏名</label>
+      <input type="text" id="biz_driver" placeholder="例：山田 太郎"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>経営届出番号（貨物軽自動車運送事業）</label>
+      <input type="text" id="biz_delivery" placeholder="例：東京000号"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>インボイス登録番号</label>
+      <input type="text" id="biz_invoice" placeholder="例：T1234567890123"
+        oninput="saveBizInfo()" maxlength="14" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>所属組合・会社名（任意）</label>
+      <input type="text" id="biz_kumiai" placeholder="例：赤帽組合員番号、所属運送会社等"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label>🚗 ナンバープレート（ヘッダーに表示）</label>
+      <input type="text" id="biz_plate" placeholder="例：品川 480 あ 1234"
+        oninput="saveBizInfo()" style="margin-bottom:0;">
+    </div>
+  </div>
+
+  <div id="docAlerts"></div>
+  <div id="docList"></div>
+  <button class="add-btn" onclick="openDocModal()">＋ 書類を追加</button>
+
+</div>
+
+<!-- ===== 履歴 ===== -->
+<div id="tab-history" class="tab-content">
+
+  <div class="month-selector">
+    <button class="month-nav" onclick="changeMonth(-1)">‹</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button class="month-nav" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-box" style="border-color:#FFB300; background:#FFFDE7;">
+      <div class="s-label">💰 売上合計</div>
+      <div class="s-value" id="sumRevenue" style="color:#F57F17;">0</div>
+      <div class="s-unit">円</div>
+    </div>
+    <div class="summary-box" style="border-color:#66BB6A; background:#E8F5E9;">
+      <div class="s-label">📈 粗利益</div>
+      <div class="s-value" id="sumProfit" style="color:#2E7D32;">0</div>
+      <div class="s-unit">円</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">案件数</div>
+      <div class="s-value" id="sumTrips">0</div>
+      <div class="s-unit">件</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">走行距離</div>
+      <div class="s-value" id="sumKm">0</div>
+      <div class="s-unit">km</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">高速代合計</div>
+      <div class="s-value" id="sumToll">0</div>
+      <div class="s-unit">円</div>
+    </div>
+    <div class="summary-box">
+      <div class="s-label">給油合計</div>
+      <div class="s-value" id="sumFuel">0</div>
+      <div class="s-unit">円</div>
+    </div>
+  </div>
+
+  <div id="historyList"></div>
+
+  <!-- データ出力 -->
+  <div style="display:flex; gap:8px; margin-bottom:12px;">
+    <button class="add-btn" style="flex:1; background:linear-gradient(135deg, #F57F17 0%, #FFB300 100%); margin-bottom:0;" onclick="exportCSV()">📊 CSV出力</button>
+    <button class="add-btn" style="flex:1; background:linear-gradient(135deg, #1565C0 0%, #42A5F5 100%); margin-bottom:0;" onclick="exportMonthlyPDF()">📄 PDF出力</button>
+  </div>
+  <p style="font-size:11px; color:var(--text-light); text-align:center; margin-bottom:12px;">CSV＝確定申告用 ／ PDF＝運輸局・事故報告用</p>
+
+  <!-- バックアップ -->
+  <div class="backup-section">
+    <h3>💾 データバックアップ</h3>
+    <div class="backup-btns">
+      <button class="backup-btn export" onclick="exportData()">📤 エクスポート</button>
+      <button class="backup-btn import" onclick="document.getElementById('importFile').click()">📥 インポート</button>
+      <input type="file" id="importFile" accept=".json" class="hidden-input" onchange="importData(event)">
+    </div>
+    <p class="backup-note">エクスポートで全データをJSON保存。機種変更やデータ消失時にインポートで復元できます。</p>
+  </div>
+
+</div>
+
+<!-- ===== 整備記録 ===== -->
+<div id="tab-maintenance" class="tab-content">
+
+  <!-- 次回交換目安サマリー -->
+  <div id="maintSummary"></div>
+
+  <!-- 整備履歴一覧 -->
+  <div id="maintList"></div>
+
+  <!-- 整備追加 -->
+  <button class="add-btn" onclick="openMaintModal()">＋ 整備記録を追加</button>
+
+</div>
+
+<!-- ===== 整備モーダル ===== -->
+<div class="modal-overlay" id="maintModal">
+  <div class="modal">
+    <h3 id="maintModalTitle">🔧 整備記録を追加</h3>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>日付</label>
+        <input type="date" id="m_date">
+      </div>
+      <div class="form-group">
+        <label>整備内容</label>
+        <select id="m_type" onchange="onMaintTypeChange()">
+          <option value="オイル交換">オイル交換</option>
+          <option value="エレメント交換">エレメント交換</option>
+          <option value="オイル＋エレメント">オイル＋エレメント</option>
+          <option value="タイヤ交換">タイヤ交換</option>
+          <option value="バッテリー交換">バッテリー交換</option>
+          <option value="車検">車検</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>ODOメーター</label>
+        <input type="number" id="m_odo" placeholder="例：181017" inputmode="numeric" pattern="[0-9]*" oninput="onMaintOdoChange()">
+      </div>
+      <div class="form-group">
+        <label>次回目安ODO</label>
+        <input type="number" id="m_nextOdo" placeholder="任意" inputmode="numeric" pattern="[0-9]*">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea id="m_memo" placeholder="例：純正オイル使用、ディーラーにて" rows="2"></textarea>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeMaintModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveMaint()">保存</button>
+    </div>
+    <button id="maintDeleteBtn" class="btn-delete" onclick="deleteMaint()" style="display:none;">🗑 削除</button>
+  </div>
+</div>
+
+<!-- ===== 案件モーダル ===== -->
+<div class="modal-overlay" id="tripModal">
+  <div class="modal">
+    <h3 id="tripModalTitle">📋 案件を追加</h3>
+
+    <div class="form-group">
+      <label>顧客名 / 案件名</label>
+      <input type="text" id="f_client" placeholder="例：山田商店 引越し">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>日付</label>
+        <input type="date" id="f_date">
+      </div>
+      <div class="form-group">
+        <label>仕事種別</label>
+        <select id="f_type">
+          <option value="">-- 未分類 --</option>
+          <option value="直接取引">直接取引</option>
+          <option value="プラットフォーム">プラットフォーム</option>
+          <option value="下請け">下請け</option>
+          <option value="定期便">定期便</option>
+          <option value="スポット">スポット</option>
+          <option value="MTG">MTG</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>出発地</label>
+        <input type="text" id="f_from" placeholder="例：山形市">
+      </div>
+      <div class="form-group">
+        <label>目的地</label>
+        <input type="text" id="f_to" placeholder="例：仙台市">
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">🚦 出発記録</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>出発時刻</label>
+          <div class="time-input-group">
+            <input type="time" id="f_startTime">
+            <button class="now-btn" onclick="setNow('f_startTime')">今</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ODOメーター（出発）</label>
+          <input type="number" id="f_startOdo" placeholder="例：12345" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">🏁 到着記録</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>到着時刻</label>
+          <div class="time-input-group">
+            <input type="time" id="f_endTime">
+            <button class="now-btn" onclick="setNow('f_endTime')">今</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>ODOメーター（到着）</label>
+          <input type="number" id="f_endOdo" placeholder="例：12398" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">☕ 休憩記録（任意）</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>休憩開始</label>
+          <div class="time-input-group">
+            <input type="time" id="f_breakStart">
+            <button class="now-btn" onclick="setNow('f_breakStart')">今</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>休憩終了</label>
+          <div class="time-input-group">
+            <input type="time" id="f_breakEnd">
+            <button class="now-btn" onclick="setNow('f_breakEnd')">今</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>休憩地点</label>
+        <input type="text" id="f_breakLocation" placeholder="例：国見SA、コンビニ等">
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">📍 経過地点（任意）</div>
+      <div class="form-group">
+        <input type="text" id="f_waypoints" placeholder="例：山形蔵王IC → 村田JCT → 仙台宮城IC">
+      </div>
+    </div>
+
+    <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">💰 売上・経費</div>
+      <div class="form-group">
+        <label>売上金額（円）</label>
+        <input type="number" id="f_revenue" placeholder="例：15000" inputmode="numeric" pattern="[0-9]*" style="border-color:#FFB300; background:#FFFDE7;">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>高速代（円）</label>
+          <input type="number" id="f_toll" placeholder="例：2200" inputmode="numeric" pattern="[0-9]*">
+        </div>
+        <div class="form-group">
+          <label>給油金額（円）</label>
+          <input type="number" id="f_fuel" placeholder="例：3000" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>メモ（任意）</label>
+      <textarea id="f_memo" rows="2" placeholder="特記事項・ヒヤリハット等" style="resize:none;"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTripModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveTrip()">保存する</button>
+    </div>
+    <div id="printBtnArea" style="display:none; margin-top:8px;">
+      <button onclick="printTripRecord(editingTripId)" style="width:100%; padding:10px; background:#F5F5F0; border:1.5px solid #CCC8C0; border-radius:10px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer;">📄 業務記録を出力（印刷/PDF）</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 書類モーダル ===== -->
+<div class="modal-overlay" id="docModal">
+  <div class="modal">
+    <h3 id="docModalTitle">📄 書類を追加</h3>
+
+    <div class="form-group">
+      <label>書類の種類</label>
+      <select id="d_type">
+        <option value="shakken">車検証</option>
+        <option value="jibai">自賠責保険</option>
+        <option value="ninni">任意保険</option>
+        <option value="kamotsu">貨物保険</option>
+        <option value="menkyo">免許証</option>
+        <option value="seibiki">定期整備記録簿</option>
+        <option value="other">その他</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>書類名（任意・カスタム名）</label>
+      <input type="text" id="d_name" placeholder="例：令和7年度 任意保険">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>有効期限</label>
+        <input type="date" id="d_expiry">
+      </div>
+      <div class="form-group">
+        <label>アラート（期限○日前）</label>
+        <select id="d_alertDays">
+          <option value="14">14日前</option>
+          <option value="30" selected>30日前</option>
+          <option value="60">60日前</option>
+          <option value="90">90日前</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>📎 写真 / ファイル（タップして選択）</label>
+      <div id="d_photoPreview" onclick="document.getElementById('d_photoInput').click()"
+        style="width:100%; min-height:90px; border:2px dashed var(--border); border-radius:12px;
+               display:flex; flex-direction:column; align-items:center; justify-content:center;
+               cursor:pointer; background:#fafafa; overflow:hidden; position:relative; padding:8px;">
+        <span id="d_photoPlaceholder" style="font-size:13px; color:var(--text-light); text-align:center;">
+          📷 写真を撮る・選ぶ<br><span style="font-size:11px;">📄 PDFなどファイルも可</span>
+        </span>
+        <img id="d_photoImg" style="display:none; width:100%; height:110px; object-fit:cover; border-radius:8px;">
+        <div id="d_fileInfo" style="display:none; text-align:center;">
+          <div style="font-size:36px;">📄</div>
+          <div id="d_fileName" style="font-size:12px; color:var(--text-mid); margin-top:4px; word-break:break-all;"></div>
+        </div>
+      </div>
+      <input type="file" id="d_photoInput" accept="image/*,application/pdf,.pdf"
+             class="hidden-input" onchange="previewPhoto(this)">
+    </div>
+
+    <div class="form-group">
+      <label>メモ（任意）</label>
+      <input type="text" id="d_memo" placeholder="例：証券番号 AB-12345">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeDocModal()">キャンセル</button>
+      <button class="btn-save" onclick="saveDoc()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 写真拡大モーダル -->
+<div class="photo-modal-overlay" id="photoModal" onclick="closePhotoModal()">
+  <button class="photo-modal-close" onclick="closePhotoModal()">✕</button>
+  <img id="photoModalImg" src="" alt="書類写真">
+</div>
+
+<!-- 隠しファイル入力（写真更新用） -->
+<input type="file" id="updatePhotoInput" accept="image/*,application/pdf,.pdf"
+       class="hidden-input" onchange="updateDocPhoto(this)">
+
+<script>
+// 汎用版nippi - カレンダー同期は赤帽専用版のみの機能
+
+// ===== データ管理 =====
+const STORAGE_KEY = 'nippi_app_v1';
+let data = { trips: [], docs: [], inspections: {}, alcoholChecks: {}, maintenances: [] };
+
+function loadData() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) data = JSON.parse(saved);
+  if (!data.maintenances) data.maintenances = [];
+}
+
+// 既存の大きな画像データを自動圧縮（初回のみ実行）
+async function migrateCompressPhotos() {
+  var migrated = localStorage.getItem('nippi_app_photoMigrated');
+  if (migrated || !data.docs || data.docs.length === 0) return;
+  var changed = false;
+  for (var i = 0; i < data.docs.length; i++) {
+    var doc = data.docs[i];
+    if (doc.photo && !doc.isPdf && doc.photo.length > 100000) {
+      try {
+        doc.photo = await compressImage(doc.photo, 800, 0.7);
+        changed = true;
+      } catch(e) { /* skip */ }
+    }
+  }
+  if (changed) {
+    saveData();
+    console.log('📦 既存書類の写真を圧縮しました');
+  }
+  localStorage.setItem('nippi_app_photoMigrated', '1');
+}
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      alert('⚠️ 保存容量の上限に達しました。\n書類の写真サイズが大きすぎる可能性があります。\n不要な書類を削除するか、エクスポートでバックアップしてください。');
+    } else {
+      alert('保存に失敗しました: ' + e.message);
+    }
+    console.error('saveData error:', e);
+  }
+}
+
+// ===== CSV出力（月次・確定申告用） =====
+function exportCSV() {
+  const y = historyMonth.getFullYear(), m = historyMonth.getMonth() + 1;
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr));
+
+  if (trips.length === 0) {
+    alert('この月のデータがありません');
+    return;
+  }
+
+  // BOM付きUTF-8（Excelで文字化けしない）
+  const BOM = '﻿';
+  const headers = [
+    '日付','顧客名','仕事種別','出発地','目的地',
+    '出発時刻','到着時刻','出発ODO','到着ODO','走行距離(km)',
+    '稼働時間','売上金額','高速代','給油金額','メモ','ステータス'
+  ];
+
+  const rows = [...trips].sort((a,b) => a.date.localeCompare(b.date)).map(t => {
+    const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : '';
+    const dur = calcDuration(t.startTime, t.endTime) || '';
+    return [
+      t.date || '',
+      csvEscape(t.client || ''),
+      t.type || '',
+      csvEscape(t.from || ''),
+      csvEscape(t.to || ''),
+      t.startTime || '',
+      t.endTime || '',
+      t.startOdo || '',
+      t.endOdo || '',
+      km,
+      dur,
+      t.revenue || '',
+      t.toll || '',
+      t.fuel || '',
+      csvEscape(t.memo || ''),
+      { planned:'予定', 'in-progress':'運行中', completed:'完了' }[t.status] || t.status || ''
+    ].join(',');
+  });
+
+  // 集計行
+  const totalRevenue = trips.reduce((s,t) => s + (t.revenue || 0), 0);
+  const totalToll    = trips.reduce((s,t) => s + (t.toll || 0), 0);
+  const totalFuel    = trips.reduce((s,t) => s + (t.fuel || 0), 0);
+  const totalKm      = trips.reduce((s,t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const completedCount = trips.filter(t => t.status === 'completed').length;
+
+  rows.push(''); // 空行
+  rows.push(`合計,${completedCount}件完了（全${trips.length}件）,,,,,,,,${totalKm},${totalRevenue},${totalToll},${totalFuel},,`);
+  rows.push(`粗利益,,,,,,,,,,,,,,${totalRevenue - totalToll - totalFuel},`);
+
+  const csv = BOM + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `運行記録_${y}年${m}月.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  alert(`📊 ${y}年${m}月のCSVを保存しました（${trips.length}件）`);
+}
+
+function csvEscape(str) {
+  if (!str) return '';
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+// ===== 月次運行記録 PDF出力（運輸局・事故報告用） =====
+function exportMonthlyPDF() {
+  const y = historyMonth.getFullYear(), m = historyMonth.getMonth() + 1;
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr))
+    .sort((a,b) => (a.date + (a.startTime||'')).localeCompare(b.date + (b.startTime||'')));
+
+  if (trips.length === 0) {
+    alert('この月のデータがありません');
+    return;
+  }
+
+  const biz = data.bizInfo || {};
+  const totalRevenue = trips.reduce((s,t) => s + (t.revenue || 0), 0);
+  const totalKm = trips.reduce((s,t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const totalToll = trips.reduce((s,t) => s + (t.toll || 0), 0);
+  const totalFuel = trips.reduce((s,t) => s + (t.fuel || 0), 0);
+  const completed = trips.filter(t => t.status === 'completed').length;
+
+  // 日付を和暦に
+  function toReiwa(dateStr) {
+    if (!dateStr) return '';
+    const [yy,mm,dd] = dateStr.split('-');
+    return `R${parseInt(yy)-2018}.${parseInt(mm)}.${parseInt(dd)}`;
+  }
+
+  // 日別にグループ化
+  const byDate = {};
+  trips.forEach(t => {
+    if (!byDate[t.date]) byDate[t.date] = [];
+    byDate[t.date].push(t);
+  });
+
+  const tripRows = trips.map((t, i) => {
+    const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : '';
+    const dur = calcDuration(t.startTime, t.endTime) || '';
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${t.date ? t.date.slice(5).replace('-','/') : ''}</td>
+      <td style="text-align:left;">${esc(t.client || '')}</td>
+      <td>${esc(t.type || '')}</td>
+      <td style="text-align:left;">${esc(t.from || '')} → ${esc(t.to || '')}</td>
+      <td>${t.startTime || ''}</td>
+      <td>${t.endTime || ''}</td>
+      <td>${dur}</td>
+      <td>${t.startOdo ? t.startOdo.toLocaleString() : ''}</td>
+      <td>${t.endOdo ? t.endOdo.toLocaleString() : ''}</td>
+      <td>${km ? km.toLocaleString() : ''}</td>
+      <td style="text-align:right;">${t.revenue ? '¥'+t.revenue.toLocaleString() : ''}</td>
+      <td style="text-align:right;">${t.toll ? '¥'+t.toll.toLocaleString() : ''}</td>
+      <td style="text-align:right;">${t.fuel ? '¥'+t.fuel.toLocaleString() : ''}</td>
+      <td style="text-align:left; font-size:8px;">${esc(t.memo || '')}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>運行記録簿 ${y}年${m}月</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Hiragino Sans','Noto Sans JP',sans-serif; font-size:10px; color:#222; line-height:1.4; }
+  .header-block { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; border-bottom:2px solid #333; padding-bottom:8px; }
+  .header-block h1 { font-size:18px; font-weight:700; }
+  .header-block .period { font-size:13px; margin-top:4px; }
+  .biz-info { text-align:right; font-size:10px; line-height:1.6; }
+  .biz-info .name { font-size:13px; font-weight:700; }
+  .summary-row { display:flex; gap:12px; margin-bottom:10px; }
+  .summary-item { flex:1; border:1px solid #999; border-radius:4px; padding:6px 8px; text-align:center; }
+  .summary-item .label { font-size:9px; color:#666; }
+  .summary-item .val { font-size:14px; font-weight:700; }
+  .summary-item.revenue { border-color:#F57F17; background:#FFFDE7; }
+  .summary-item.revenue .val { color:#F57F17; }
+  .summary-item.profit { border-color:#2E7D32; background:#E8F5E9; }
+  .summary-item.profit .val { color:#2E7D32; }
+  table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+  th, td { border:1px solid #999; padding:3px 4px; text-align:center; font-size:8.5px; }
+  th { background:#f0f0f0; font-weight:700; font-size:8px; white-space:nowrap; }
+  tr:nth-child(even) td { background:#fafafa; }
+  .total-row td { background:#f0f0f0; font-weight:700; }
+  .footer { margin-top:12px; display:flex; justify-content:space-between; font-size:9px; color:#666; }
+  .stamp-area { display:flex; gap:16px; margin-top:10px; }
+  .stamp-box { width:70px; height:70px; border:1px solid #999; text-align:center; font-size:9px; padding-top:4px; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<div class="header-block">
+  <div>
+    <h1>運行記録簿</h1>
+    <div class="period">${y}年${m}月（${toReiwa(y+'-'+String(m).padStart(2,'0')+'-01').split('.').slice(0,2).join('.')}）</div>
+  </div>
+  <div class="biz-info">
+    <div class="name">${esc(biz.driver || '（事業者名未設定）')}</div>
+    ${biz.delivery ? '<div>届出番号：'+esc(biz.delivery)+'</div>' : ''}
+    ${biz.invoice ? '<div>インボイス：'+esc(biz.invoice)+'</div>' : ''}
+    ${biz.kumiai ? '<div>組合員番号：'+esc(biz.kumiai)+'</div>' : ''}
+    ${biz.plate ? '<div>車両：'+esc(biz.plate)+'</div>' : ''}
+  </div>
+</div>
+
+<div class="summary-row">
+  <div class="summary-item revenue">
+    <div class="label">売上合計</div>
+    <div class="val">¥${totalRevenue.toLocaleString()}</div>
+  </div>
+  <div class="summary-item profit">
+    <div class="label">粗利益</div>
+    <div class="val">¥${(totalRevenue - totalToll - totalFuel).toLocaleString()}</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">完了案件</div>
+    <div class="val">${completed}件</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">総走行距離</div>
+    <div class="val">${totalKm.toLocaleString()}km</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">高速代計</div>
+    <div class="val">¥${totalToll.toLocaleString()}</div>
+  </div>
+  <div class="summary-item">
+    <div class="label">給油計</div>
+    <div class="val">¥${totalFuel.toLocaleString()}</div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>No</th><th>日付</th><th>顧客名・案件名</th><th>種別</th><th>ルート</th>
+      <th>出発</th><th>到着</th><th>稼働</th>
+      <th>出発ODO</th><th>到着ODO</th><th>距離</th>
+      <th>売上</th><th>高速代</th><th>給油</th><th>備考</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${tripRows}
+    <tr class="total-row">
+      <td colspan="2">合計</td>
+      <td colspan="3">${completed}件完了 / 全${trips.length}件</td>
+      <td colspan="5"></td>
+      <td>${totalKm.toLocaleString()}</td>
+      <td style="text-align:right;">¥${totalRevenue.toLocaleString()}</td>
+      <td style="text-align:right;">¥${totalToll.toLocaleString()}</td>
+      <td style="text-align:right;">¥${totalFuel.toLocaleString()}</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="stamp-area">
+  <div class="stamp-box">管理者</div>
+  <div class="stamp-box">運転者</div>
+  <div class="stamp-box">確認者</div>
+</div>
+
+<div class="footer">
+  <div>出力日：${new Date().toLocaleDateString('ja-JP')}</div>
+  <div>本書は運行管理システムにより自動生成されました</div>
+</div>
+
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ===== バックアップ（エクスポート/インポート） =====
+function exportData() {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'nippi_backup_' + dateStr + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  alert('バックアップを保存しました');
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm('現在のデータを上書きします。よろしいですか？')) {
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.trips) throw new Error('trips が見つかりません');
+      data = imported;
+      saveData();
+      renderTrips();
+      renderHistory();
+      alert('データを復元しました（' + data.trips.length + '件の運行記録）');
+    } catch (err) {
+      alert('インポート失敗: ' + err.message);
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ===== 業務記録 印刷出力 =====
+function printTripRecord(id) {
+  const t = data.trips.find(tr => tr.id === id);
+  if (!t) { alert('案件が見つかりません'); return; }
+  const biz = data.bizInfo || {};
+  const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0;
+
+  function toReiwa(dateStr) {
+    if (!dateStr) return '';
+    const dt = new Date(dateStr);
+    return '令和 ' + (dt.getFullYear() - 2018) + ' 年 ' + (dt.getMonth()+1) + ' 月 ' + dt.getDate() + ' 日';
+  }
+
+  const wpText = t.waypoints || '';
+  const wpList = wpText ? wpText.split(/[→、,]/).map(function(s){return s.trim()}).filter(Boolean) : [];
+  var wpRowsHtml = '';
+  for (var i = 0; i < Math.max(wpList.length, 6); i++) {
+    wpRowsHtml += '<tr><td>' + (wpList[i]||'') + '</td><td></td><td></td><td></td></tr>';
+  }
+
+  var breakHtml = '';
+  if (t.breakStart || t.breakEnd || t.breakLocation) {
+    breakHtml = '<table><tr><td colspan="4" class="st">休憩</td></tr>'
+      + '<tr><th>休憩地点</th><td>' + (t.breakLocation||'') + '</td>'
+      + '<th>時間</th><td>' + (t.breakStart||'') + ' ～ ' + (t.breakEnd||'') + '</td></tr></table>';
+  }
+
+  // 印刷用オーバーレイを作成
+  var overlay = document.getElementById('printOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'printOverlay';
+    document.body.appendChild(overlay);
+    var style = document.createElement('style');
+    style.textContent = [
+      '#printOverlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#fff; z-index:9999; overflow:auto; padding:15px; }',
+      '#printOverlay.open { display:block; }',
+      '#printOverlay h1 { text-align:center; font-size:16px; margin:0 0 10px; }',
+      '#printOverlay table { width:100%; border-collapse:collapse; margin-bottom:10px; }',
+      '#printOverlay th, #printOverlay td { border:1px solid #333; padding:3px 5px; font-size:11px; text-align:left; }',
+      '#printOverlay th { background:#E8F4FD; font-weight:700; white-space:nowrap; width:130px; }',
+      '#printOverlay .st { background:#5B9BD5; color:#fff; font-weight:700; font-size:11px; padding:4px 6px; }',
+      '#printOverlay .note { font-size:9px; color:#555; margin-bottom:8px; line-height:1.5; }',
+      '#printOverlay .ft { font-size:9px; text-align:right; color:#888; margin-top:12px; }',
+      '#printOverlay .print-bar { display:flex; gap:8px; margin-bottom:12px; }',
+      '#printOverlay .print-bar button { flex:1; padding:10px; border-radius:10px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; border:1.5px solid #ccc; }',
+      '#printOverlay .print-bar .p-btn { background:#5B9BD5; color:#fff; border-color:#5B9BD5; }',
+      '@media print { #printOverlay .print-bar { display:none !important; } body > *:not(#printOverlay) { display:none !important; } #printOverlay { position:static; padding:0; } }',
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
+  overlay.innerHTML = '<div class="print-bar">'
+    + '<button class="p-btn" onclick="window.print()">🖨 印刷 / PDF保存</button>'
+    + '<button onclick="document.getElementById(\'printOverlay\').classList.remove(\'open\')">✕ 閉じる</button>'
+    + '</div>'
+    + '<h1>業務の記録</h1>'
+    + '<table>'
+    + '<tr><th>運転者の氏名</th><td colspan="5">' + (biz.driver||'') + '</td></tr>'
+    + '<tr><th>車両番号</th><td colspan="5">' + (biz.plate||'') + '</td></tr>'
+    + '<tr><th>日にち</th><td colspan="5">' + toReiwa(t.date) + '</td></tr>'
+    + '<tr><th>業務開始地点・日時</th><td colspan="2">' + (t.from||'') + '</td><td colspan="3">' + (t.startTime||'') + '</td></tr>'
+    + '<tr><th>業務終了地点・日時</th><td colspan="2">' + (t.to||'') + '</td><td colspan="3">' + (t.endTime||'') + '</td></tr>'
+    + '<tr><th>走行距離計の表示</th><td>出発時</td><td>' + (t.startOdo||'') + ' km</td><td>到着時</td><td colspan="2">' + (t.endOdo||'') + ' km</td></tr>'
+    + '<tr><th>業務に従事した距離</th><td colspan="5">' + km + ' km</td></tr>'
+    + '</table>'
+    + '<table><tr><td colspan="4" class="st">主な経過地点・到着時刻・出発時刻</td></tr>'
+    + '<tr><th style="width:40%;text-align:center">地点</th><th style="width:15%;text-align:center">着時刻</th><th style="width:15%;text-align:center">発時刻</th><th style="width:30%;text-align:center">備考</th></tr>'
+    + wpRowsHtml + '</table>'
+    + breakHtml
+    + '<table><tr><th>業務を交替した場合、地点・日時</th><td>令和　年　月　日</td></tr></table>'
+    + '<table>'
+    + '<tr><td colspan="6" class="st">荷主の都合により集貨又は配達を行った地点で30分以上待機した場合</td></tr>'
+    + '<tr><th>集貨地点等</th><td colspan="5"></td></tr>'
+    + '<tr><th>到着指定日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>'
+    + '<tr><th>到着日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>'
+    + '<tr><th>荷役作業の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">～</td></tr>'
+    + '<tr><th>附帯業務の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="3">～</td></tr>'
+    + '<tr><th>出発日時</th><td colspan="2">令和　年　月　日</td><td colspan="3"></td></tr>'
+    + '<tr><th>備考</th><td colspan="5"></td></tr>'
+    + '</table>'
+    + '<p class="note">※1「集貨地点等」は、集貨又は配達を行った地点。「荷役作業」は、集貨地点等における積込み又は取卸し。「附帯業務」は、集貨地点等で、貨物の荷造り、仕分その他の貨物自動車運送事業に附帯する業務。<br>'
+    + '※2 荷主の都合とは、事業者としての運行計画又は運行指示によらない、荷主の指示等によるものをいい、事業者の都合により生じた待機時間は、これに含まない。</p>'
+    + '<table>'
+    + '<tr><td colspan="5" class="st">荷役作業又は附帯業務（荷役作業等）を実施した場合</td></tr>'
+    + '<tr><th>集貨地点等</th><td colspan="4"></td></tr>'
+    + '<tr><th>荷役作業等の開始・終了</th><td colspan="2">令和　年　月　日</td><td colspan="2">～</td></tr>'
+    + '<tr><th>荷役作業等の内容</th><td colspan="4"></td></tr>'
+    + '<tr><th>荷主の確認の有無</th><td colspan="4"></td></tr>'
+    + '<tr><th>備考</th><td colspan="4"></td></tr>'
+    + '</table>'
+    + '<table>'
+    + '<tr><td colspan="2" class="st">事故、著しい運行の遅延、その他の異常な状態が発生した場合</td></tr>'
+    + '<tr><th>概要及び要因</th><td style="height:40px">' + (t.memo||'') + '</td></tr>'
+    + '</table>'
+    + '<p class="ft">（保存期間：1年）　nippi 運行管理アプリより出力</p>';
+
+  overlay.classList.add('open');
+  closeTripModal();
+}
+
+// ===== 日付ユーティリティ =====
+function today() {
+  const n = new Date();
+  const y = n.getFullYear();
+  const m = String(n.getMonth() + 1).padStart(2, '0');
+  const d = String(n.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function formatDate(d) {
+  if (!d) return '-';
+  const dt = new Date(d);
+  return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+}
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr) - new Date(today());
+  return Math.ceil(diff / 86400000);
+}
+function calcDuration(start, end) {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const mins = (eh * 60 + em) - (sh * 60 + sm);
+  if (mins < 0) return null;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? `${h}時間${m > 0 ? m+'分' : ''}` : `${m}分`;
+}
+function nowTime() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+
+// ===== ヘッダー日付 =====
+function updateHeaderDate() {
+  const n = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('headerDate').textContent =
+    `${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日（${days[n.getDay()]}）`;
+}
+
+// ===== タブ切替 =====
+// ===== 書類タブ PINロック =====
+var docsUnlocked = false;
+var DOCS_PIN_KEY = 'nippi_app_docsPin';
+
+function getDocsPin() { return localStorage.getItem(DOCS_PIN_KEY); }
+function setDocsPin(pin) { localStorage.setItem(DOCS_PIN_KEY, pin); }
+
+function checkDocsPin() {
+  var savedPin = getDocsPin();
+  if (!savedPin) {
+    // 初回: PIN設定を促す
+    var newPin = prompt('🔒 書類管理のPINを設定してください（4桁の数字）');
+    if (!newPin || !/^\d{4}$/.test(newPin)) { alert('4桁の数字で設定してください'); return false; }
+    var confirm2 = prompt('確認のためもう一度PINを入力してください');
+    if (newPin !== confirm2) { alert('PINが一致しません。やり直してください'); return false; }
+    setDocsPin(newPin);
+    alert('✅ PINを設定しました。次回から書類タブを開くときにPIN入力が必要です。');
+    return true;
+  }
+  var input = prompt('🔒 書類管理のPINを入力してください（4桁）');
+  if (input === savedPin) return true;
+  alert('❌ PINが違います');
+  return false;
+}
+
+function switchTab(tab) {
+  // 書類タブはPINロック
+  if (tab === 'docs' && !docsUnlocked) {
+    if (!checkDocsPin()) return;
+    docsUnlocked = true;
+  }
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'history') renderHistory();
+  if (tab === 'docs') renderDocs();
+  if (tab === 'maintenance') renderMaintenance();
+}
+
+// ===== 日常点検 =====
+function toggleInspection() {
+  const t = today();
+  data.inspections[t] = !data.inspections[t];
+  saveData();
+  renderInspection();
+}
+function renderInspection() {
+  const t = today();
+  const done = data.inspections[t];
+  const btn = document.getElementById('inspectionBtn');
+  if (done) {
+    btn.textContent = '✅ 日常点検完了（タップで取消）';
+    btn.classList.add('done');
+  } else {
+    btn.textContent = '⬜ 日常点検を完了にする';
+    btn.classList.remove('done');
+  }
+}
+
+// ===== アルコール検知 =====
+function toggleAlcohol() {
+  const t = today();
+  if (!data.alcoholChecks) data.alcoholChecks = {};
+  data.alcoholChecks[t] = !data.alcoholChecks[t];
+  saveData();
+  renderAlcohol();
+}
+function renderAlcohol() {
+  const t = today();
+  if (!data.alcoholChecks) data.alcoholChecks = {};
+  const done = data.alcoholChecks[t];
+  const btn = document.getElementById('alcoholBtn');
+  if (done) {
+    btn.textContent = '✅ アルコール検知 OK（タップで取消）';
+    btn.classList.add('done');
+  } else {
+    btn.textContent = '🍺 アルコール検知（未実施）';
+    btn.classList.remove('done');
+  }
+}
+
+// ===== 案件管理 =====
+let editingTripId = null;
+
+function openTripModal(id) {
+  editingTripId = id || null;
+  const modal = document.getElementById('tripModal');
+  if (id) {
+    const t = data.trips.find(t => t.id === id);
+    document.getElementById('tripModalTitle').textContent = '✏️ 案件を編集';
+    document.getElementById('f_client').value        = t.client || '';
+    document.getElementById('f_date').value           = t.date || today();
+    document.getElementById('f_from').value           = t.from || '';
+    document.getElementById('f_to').value             = t.to || '';
+    document.getElementById('f_type').value           = t.type || '';
+    document.getElementById('f_startTime').value      = t.startTime || '';
+    document.getElementById('f_startOdo').value       = t.startOdo || '';
+    document.getElementById('f_endTime').value        = t.endTime || '';
+    document.getElementById('f_endOdo').value         = t.endOdo || '';
+    document.getElementById('f_breakStart').value     = t.breakStart || '';
+    document.getElementById('f_breakEnd').value       = t.breakEnd || '';
+    document.getElementById('f_breakLocation').value  = t.breakLocation || '';
+    document.getElementById('f_waypoints').value      = t.waypoints || '';
+    document.getElementById('f_revenue').value        = t.revenue || '';
+    document.getElementById('f_toll').value           = t.toll || '';
+    document.getElementById('f_fuel').value           = t.fuel || '';
+    document.getElementById('f_memo').value           = t.memo || '';
+  } else {
+    document.getElementById('tripModalTitle').textContent = '📋 案件を追加';
+    document.getElementById('f_date').value = today();
+    ['f_client','f_from','f_to','f_startTime','f_startOdo',
+     'f_endTime','f_endOdo','f_breakStart','f_breakEnd','f_breakLocation',
+     'f_waypoints','f_revenue','f_toll','f_fuel','f_memo']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f_type').value = '';
+  }
+  document.getElementById('printBtnArea').style.display = id ? 'block' : 'none';
+  modal.classList.add('open');
+}
+function closeTripModal() {
+  document.getElementById('tripModal').classList.remove('open');
+  editingTripId = null;
+}
+function saveTrip() {
+  const client        = document.getElementById('f_client').value.trim();
+  const date          = document.getElementById('f_date').value || today();
+  const from          = document.getElementById('f_from').value.trim();
+  const to            = document.getElementById('f_to').value.trim();
+  const type          = document.getElementById('f_type').value;
+  const startTime     = document.getElementById('f_startTime').value;
+  const startOdo      = parseInt(document.getElementById('f_startOdo').value) || null;
+  const endTime       = document.getElementById('f_endTime').value;
+  const endOdo        = parseInt(document.getElementById('f_endOdo').value) || null;
+  const breakStart    = document.getElementById('f_breakStart').value;
+  const breakEnd      = document.getElementById('f_breakEnd').value;
+  const breakLocation = document.getElementById('f_breakLocation').value.trim();
+  const waypoints     = document.getElementById('f_waypoints').value.trim();
+  const revenue       = parseInt(document.getElementById('f_revenue').value) || null;
+  const toll          = parseInt(document.getElementById('f_toll').value) || null;
+  const fuel          = parseInt(document.getElementById('f_fuel').value) || null;
+  const memo          = document.getElementById('f_memo').value.trim();
+
+  if (!client) { alert('顧客名・案件名を入力してください'); return; }
+
+  let status = 'planned';
+  if (startTime && endTime) status = 'completed';
+  else if (startTime) status = 'in-progress';
+
+  if (editingTripId) {
+    const idx = data.trips.findIndex(t => t.id === editingTripId);
+    data.trips[idx] = { ...data.trips[idx], date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status };
+  } else {
+    data.trips.push({ id: Date.now(), date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status });
+  }
+  saveData();
+  closeTripModal();
+  renderTrips();
+  renderHistory();
+}
+function deleteTrip(id) {
+  if (!confirm('この案件を削除しますか？')) return;
+  data.trips = data.trips.filter(t => t.id !== id);
+  saveData();
+  renderTrips();
+}
+function startTrip(id) {
+  const t = data.trips.find(t => t.id === id);
+  const odo = prompt('出発ODOメーターを入力（km）\n※時間制の場合は空欄のままOKで開始できます');
+  if (odo === null) return; // キャンセル
+  t.startTime = nowTime();
+  t.startOdo  = odo ? parseInt(odo) : null;
+  t.status    = 'in-progress';
+  saveData();
+  renderTrips();
+}
+function endTrip(id) {
+  const t = data.trips.find(t => t.id === id);
+  const odo = prompt('到着ODOメーターを入力（km）\n※時間制の場合は空欄のままOKで完了できます');
+  if (odo === null) return; // キャンセル
+  t.endTime = nowTime();
+  t.endOdo  = odo ? parseInt(odo) : null;
+  t.status  = 'completed';
+  saveData();
+  renderTrips();
+}
+
+function renderTrips() {
+  const t = today();
+  const trips = data.trips.filter(t2 => t2.date === t);
+  const el = document.getElementById('tripList');
+
+  if (trips.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">🚛</div><p>今日の案件はまだありません<br>下のボタンから追加してください</p></div>`;
+    return;
+  }
+
+  el.innerHTML = trips.map(t => {
+    const km = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : null;
+    const dur = calcDuration(t.startTime, t.endTime);
+    const statusLabel = { planned: '予定', 'in-progress': '運行中', completed: '完了' }[t.status];
+
+    return `
+    <div class="trip-card ${t.status}">
+      <div class="trip-header">
+        <div class="trip-client">
+          ${t.client || '（案件名なし）'}
+          ${t.type ? `<span class="trip-type-badge ${t.type}">${t.type}</span>` : ''}
+          ${t.fromCal ? '<span class="trip-type-badge cal">📅</span>' : ''}
+        </div>
+        <div class="trip-status ${t.status}">${statusLabel}</div>
+      </div>
+      ${(t.from || t.to) ? `<div class="trip-route">📍 ${t.from || '?'} → ${t.to || '?'}</div>` : ''}
+      <div class="trip-times">
+        <div class="time-box">
+          <div class="label">🚦 出発</div>
+          <div class="value">${t.startTime || '--:--'}</div>
+          ${t.startOdo ? `<div class="odo">ODO: ${t.startOdo.toLocaleString()}km</div>` : ''}
+        </div>
+        <div class="time-box">
+          <div class="label">🏁 到着</div>
+          <div class="value">${t.endTime || '--:--'}</div>
+          ${t.endOdo ? `<div class="odo">ODO: ${t.endOdo.toLocaleString()}km</div>` : ''}
+        </div>
+      </div>
+      ${(km || dur || t.revenue || t.toll) ? `<div class="trip-calc">
+        ${t.revenue ? `<span style="background:#FFF8E1;color:#F57F17;">💰 ¥${t.revenue.toLocaleString()}</span>` : ''}
+        ${km ? `<span>🛣 ${km}</span>` : ''}
+        ${dur ? `<span>⏱ ${dur}</span>` : ''}
+        ${t.toll ? `<span>🛣 高速 ¥${t.toll.toLocaleString()}</span>` : ''}
+      </div>` : ''}
+      <div class="trip-actions">
+        ${t.status === 'planned'     ? `<button class="btn-start" onclick="startTrip(${t.id})">🚦 出発記録</button>` : ''}
+        ${t.status === 'in-progress' ? `<button class="btn-end" onclick="endTrip(${t.id})">🏁 到着記録</button>` : ''}
+        <button class="btn-edit" onclick="openTripModal(${t.id})">✏️</button>
+        <button class="btn-delete" onclick="deleteTrip(${t.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 書類管理 =====
+let editingDocId = null;
+let updatingDocId = null;
+
+function openDocModal(id) {
+  editingDocId = id || null;
+  const modal = document.getElementById('docModal');
+  if (id) {
+    const d = data.docs.find(d => d.id === id);
+    document.getElementById('docModalTitle').textContent = '✏️ 書類を編集';
+    document.getElementById('d_type').value      = d.type || 'shakken';
+    document.getElementById('d_name').value      = d.name || '';
+    document.getElementById('d_expiry').value    = d.expiry || '';
+    document.getElementById('d_alertDays').value = d.alertDays || '30';
+    document.getElementById('d_memo').value      = d.memo || '';
+    if (d.photo) {
+      document.getElementById('d_photoPlaceholder').style.display = 'none';
+      if (d.isPdf) {
+        document.getElementById('d_photoImg').style.display = 'none';
+        document.getElementById('d_fileName').textContent = d.fileName || 'ファイル';
+        document.getElementById('d_fileInfo').style.display = 'block';
+      } else {
+        document.getElementById('d_photoImg').src = d.photo;
+        document.getElementById('d_photoImg').style.display = 'block';
+        document.getElementById('d_fileInfo').style.display = 'none';
+      }
+      document.getElementById('d_photoImg').dataset.fileData = d.photo;
+      document.getElementById('d_photoImg').dataset.fileName = d.fileName || '';
+      document.getElementById('d_photoImg').dataset.isPdf = d.isPdf ? '1' : '0';
+    } else {
+      document.getElementById('d_photoImg').style.display = 'none';
+      document.getElementById('d_fileInfo').style.display = 'none';
+      document.getElementById('d_photoPlaceholder').style.display = '';
+      document.getElementById('d_photoImg').dataset.fileData = '';
+    }
+  } else {
+    document.getElementById('docModalTitle').textContent = '📄 書類を追加';
+    document.getElementById('d_type').value      = 'shakken';
+    document.getElementById('d_name').value      = '';
+    document.getElementById('d_expiry').value    = '';
+    document.getElementById('d_alertDays').value = '30';
+    document.getElementById('d_memo').value      = '';
+    document.getElementById('d_photoImg').style.display = 'none';
+    document.getElementById('d_fileInfo').style.display = 'none';
+    document.getElementById('d_photoPlaceholder').style.display = '';
+    document.getElementById('d_photoImg').src = '';
+    document.getElementById('d_photoImg').dataset.fileData = '';
+    document.getElementById('d_photoImg').dataset.fileName = '';
+    document.getElementById('d_photoImg').dataset.isPdf = '0';
+  }
+  modal.classList.add('open');
+}
+function closeDocModal() {
+  document.getElementById('docModal').classList.remove('open');
+  editingDocId = null;
+}
+// 画像をリサイズして容量を削減（max 800px、JPEG品質0.7）
+function compressImage(dataUrl, maxWidth, quality) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality || 0.7));
+    };
+    img.src = dataUrl;
+  });
+}
+
+function previewPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    var result = e.target.result;
+    document.getElementById('d_photoPlaceholder').style.display = 'none';
+    if (isPdf) {
+      document.getElementById('d_photoImg').style.display = 'none';
+      document.getElementById('d_fileName').textContent = file.name;
+      document.getElementById('d_fileInfo').style.display = 'block';
+    } else {
+      // 画像を圧縮（800px幅、品質70%）
+      result = await compressImage(result, 800, 0.7);
+      document.getElementById('d_fileInfo').style.display = 'none';
+      document.getElementById('d_photoImg').src = result;
+      document.getElementById('d_photoImg').style.display = 'block';
+    }
+    document.getElementById('d_photoImg').dataset.fileData = result;
+    document.getElementById('d_photoImg').dataset.fileName = file.name;
+    document.getElementById('d_photoImg').dataset.isPdf = isPdf ? '1' : '0';
+  };
+  reader.readAsDataURL(file);
+}
+function saveDoc() {
+  const type      = document.getElementById('d_type').value;
+  const name      = document.getElementById('d_name').value.trim();
+  const expiry    = document.getElementById('d_expiry').value;
+  const alertDays = parseInt(document.getElementById('d_alertDays').value);
+  const memo      = document.getElementById('d_memo').value.trim();
+  const imgEl     = document.getElementById('d_photoImg');
+  const photo     = (imgEl.dataset.fileData) ? imgEl.dataset.fileData
+                  : (imgEl.style.display !== 'none' && imgEl.src) ? imgEl.src
+                  : null;
+  const fileName  = imgEl.dataset.fileName || null;
+  const isPdf     = imgEl.dataset.isPdf === '1';
+  const typeNames = { shakken:'車検証', jibai:'自賠責保険', ninni:'任意保険',
+                      kamotsu:'貨物保険', menkyo:'免許証', seibiki:'定期整備記録簿', other:'その他' };
+  const displayName = name || typeNames[type] || '書類';
+
+  if (!expiry) { alert('有効期限を入力してください'); return; }
+
+  if (editingDocId) {
+    const idx = data.docs.findIndex(d => d.id === editingDocId);
+    const oldDoc = data.docs[idx];
+    data.docs[idx] = { ...oldDoc, type, name: displayName, expiry, alertDays, memo,
+      photo: photo || oldDoc.photo,
+      fileName: fileName || oldDoc.fileName || null,
+      isPdf: photo ? isPdf : (oldDoc.isPdf || false) };
+  } else {
+    data.docs.push({ id: Date.now(), type, name: displayName, expiry, alertDays, memo,
+      photo, fileName, isPdf });
+  }
+  saveData();
+  closeDocModal();
+  renderDocs();
+}
+function deleteDoc(id) {
+  if (!confirm('この書類を削除しますか？')) return;
+  data.docs = data.docs.filter(d => d.id !== id);
+  saveData();
+  renderDocs();
+}
+function openPhotoModal(src) {
+  document.getElementById('photoModalImg').src = src;
+  document.getElementById('photoModal').classList.add('open');
+}
+function closePhotoModal() {
+  document.getElementById('photoModal').classList.remove('open');
+}
+function triggerPhotoUpdate(id) {
+  updatingDocId = id;
+  document.getElementById('updatePhotoInput').click();
+}
+function updateDocPhoto(input) {
+  const file = input.files[0];
+  if (!file || !updatingDocId) return;
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    var result = e.target.result;
+    if (!isPdf) { result = await compressImage(result, 800, 0.7); }
+    const doc = data.docs.find(d => d.id === updatingDocId);
+    if (doc) { doc.photo = result; saveData(); renderDocs(); }
+    updatingDocId = null;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderDocs() {
+  const sortedDocs = [...data.docs].sort((a, b) => {
+    const da = daysUntil(a.expiry), db = daysUntil(b.expiry);
+    return (da ?? 9999) - (db ?? 9999);
+  });
+
+  // アラートバナー
+  const alerts = sortedDocs.filter(d => {
+    const days = daysUntil(d.expiry);
+    return days !== null && days <= d.alertDays && days >= 0;
+  });
+  const alertEl = document.getElementById('docAlerts');
+  alertEl.innerHTML = alerts.length > 0 ? alerts.map(d => {
+    const days = daysUntil(d.expiry);
+    return `<div class="card" style="border-color:${days <= 14 ? 'var(--red)' : 'var(--orange)'}; background:${days <= 14 ? 'var(--red-pale)' : 'var(--orange-pale)'}; margin-bottom:10px;">
+      ⚠️ <b>${d.name}</b> の有効期限まで残り <b>${days}日</b> です（${formatDate(d.expiry)}）
+    </div>`;
+  }).join('') : '';
+
+  // 書類リスト
+  const el = document.getElementById('docList');
+  if (sortedDocs.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">📄</div><p>書類がまだ登録されていません<br>下のボタンから追加してください</p></div>`;
+    return;
+  }
+  el.innerHTML = sortedDocs.map(d => {
+    const days = daysUntil(d.expiry);
+    let alertClass = '', daysClass = 'safe', daysText = '';
+    if (days === null) { daysText = '期限なし'; daysClass = 'expired'; }
+    else if (days < 0)  { daysText = '期限切れ'; daysClass = 'expired'; alertClass = 'alert-red'; }
+    else if (days <= 14){ daysText = `残り${days}日！`; daysClass = 'danger'; alertClass = 'alert-red'; }
+    else if (days <= d.alertDays){ daysText = `残り${days}日`; daysClass = 'warn'; alertClass = 'alert-orange'; }
+    else { daysText = `残り${days}日`; daysClass = 'safe'; }
+
+    const photoHtml = d.photo
+      ? `<div class="doc-photo" onclick="openPhotoModal('${d.photo}')"><img src="${d.photo}" alt="書類写真"></div>`
+      : `<div class="doc-photo" onclick="triggerPhotoUpdate(${d.id})">📷</div>`;
+
+    return `
+    <div class="doc-card ${alertClass}">
+      ${photoHtml}
+      <div class="doc-info">
+        <div class="doc-name">${d.name}</div>
+        <div class="doc-expiry">有効期限：${formatDate(d.expiry)}</div>
+        ${d.memo ? `<div style="font-size:11px; color:var(--text-mid);">${d.memo}</div>` : ''}
+        <div class="doc-days ${daysClass}">${daysText}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="doc-edit-btn" onclick="openDocModal(${d.id})">✏️ 編集</button>
+        <button class="doc-edit-btn" style="color:var(--red); border-color:#ffcdd2;" onclick="deleteDoc(${d.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 履歴 =====
+let historyMonth = new Date();
+
+function changeMonth(d) {
+  historyMonth.setMonth(historyMonth.getMonth() + d);
+  renderHistory();
+}
+function renderHistory() {
+  const y = historyMonth.getFullYear(), m = historyMonth.getMonth() + 1;
+  document.getElementById('monthLabel').textContent = `${y}年${m}月`;
+
+  const monthStr = `${y}-${String(m).padStart(2,'0')}`;
+  const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr) && t.status === 'completed');
+
+  const totalRevenue = trips.reduce((s, t) => s + (t.revenue || 0), 0);
+  const totalKm      = trips.reduce((s, t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const totalToll    = trips.reduce((s, t) => s + (t.toll || 0), 0);
+  const totalFuel    = trips.reduce((s, t) => s + (t.fuel || 0), 0);
+  const totalProfit  = totalRevenue - totalToll - totalFuel;
+
+  document.getElementById('sumRevenue').textContent = totalRevenue.toLocaleString();
+  document.getElementById('sumProfit').textContent  = totalProfit.toLocaleString();
+  document.getElementById('sumTrips').textContent   = trips.length;
+  document.getElementById('sumKm').textContent      = totalKm.toLocaleString();
+  document.getElementById('sumToll').textContent    = totalToll.toLocaleString();
+  document.getElementById('sumFuel').textContent    = totalFuel.toLocaleString();
+
+  // 利益がマイナスの場合は赤色に
+  const profitEl = document.getElementById('sumProfit');
+  profitEl.style.color = totalProfit < 0 ? '#C62828' : '#2E7D32';
+
+  const el = document.getElementById('historyList');
+  if (trips.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">📊</div><p>この月の完了案件はありません</p></div>`;
+    return;
+  }
+  el.innerHTML = [...trips].reverse().map(t => {
+    const km  = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : '-';
+    const dur = calcDuration(t.startTime, t.endTime) || '-';
+    return `
+    <div class="history-item" onclick="openTripModal(${t.id})" style="cursor:pointer;">
+      <div class="h-left">
+        <div class="h-client">${t.client}</div>
+        <div class="h-route">${t.date} ${(t.from||t.to) ? `／ ${t.from||'?'} → ${t.to||'?'}` : ''}</div>
+      </div>
+      <div class="h-right">
+        ${t.revenue ? `<div class="h-km" style="color:#F57F17;">💰 ¥${t.revenue.toLocaleString()}</div>` : `<div class="h-km">🛣 ${km}</div>`}
+        <div class="h-time">⏱ ${dur}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== 整備記録 =====
+let editingMaintId = null;
+
+function openMaintModal(id) {
+  editingMaintId = id || null;
+  if (id) {
+    const m = data.maintenances.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('maintModalTitle').textContent = '✏️ 整備記録を編集';
+    document.getElementById('m_date').value    = m.date || today();
+    document.getElementById('m_type').value    = m.type || 'オイル交換';
+    document.getElementById('m_odo').value     = m.odo || '';
+    document.getElementById('m_nextOdo').value = m.nextOdo || '';
+    document.getElementById('m_memo').value    = m.memo || '';
+    document.getElementById('maintDeleteBtn').style.display = 'block';
+  } else {
+    document.getElementById('maintModalTitle').textContent = '🔧 整備記録を追加';
+    document.getElementById('m_date').value    = today();
+    document.getElementById('m_type').value    = 'オイル交換';
+    document.getElementById('m_odo').value     = '';
+    document.getElementById('m_nextOdo').value = '';
+    document.getElementById('m_memo').value    = '';
+    document.getElementById('maintDeleteBtn').style.display = 'none';
+  }
+  document.getElementById('maintModal').classList.add('open');
+}
+
+function closeMaintModal() {
+  document.getElementById('maintModal').classList.remove('open');
+  editingMaintId = null;
+}
+
+function onMaintTypeChange() {
+  // オイル系を選んだ時だけODOから+5000を自動入力
+  onMaintOdoChange();
+}
+function onMaintOdoChange() {
+  const type = document.getElementById('m_type').value;
+  const odo  = parseInt(document.getElementById('m_odo').value) || 0;
+  const nextEl = document.getElementById('m_nextOdo');
+  const isOilType = (type === 'オイル交換' || type === 'エレメント交換' || type === 'オイル＋エレメント');
+  // 既に手入力されている場合は上書きしない
+  if (isOilType && odo > 0 && !nextEl.value) {
+    nextEl.value = odo + 5000;
+  }
+}
+
+function saveMaint() {
+  const date    = document.getElementById('m_date').value;
+  const type    = document.getElementById('m_type').value;
+  const odo     = parseInt(document.getElementById('m_odo').value) || 0;
+  const nextOdo = parseInt(document.getElementById('m_nextOdo').value) || null;
+  const memo    = document.getElementById('m_memo').value.trim();
+
+  if (!date)  { alert('日付を入力してください'); return; }
+  if (!odo)   { alert('ODOメーターを入力してください'); return; }
+
+  if (editingMaintId) {
+    const m = data.maintenances.find(x => x.id === editingMaintId);
+    if (m) {
+      m.date = date; m.type = type; m.odo = odo; m.nextOdo = nextOdo; m.memo = memo;
+    }
+  } else {
+    data.maintenances.push({
+      id: Date.now(),
+      date: date, type: type, odo: odo, nextOdo: nextOdo, memo: memo
+    });
+  }
+  saveData();
+  closeMaintModal();
+  renderMaintenance();
+}
+
+function deleteMaint() {
+  if (!editingMaintId) return;
+  if (!confirm('この整備記録を削除しますか？')) return;
+  data.maintenances = data.maintenances.filter(x => x.id !== editingMaintId);
+  saveData();
+  closeMaintModal();
+  renderMaintenance();
+}
+
+function getCurrentOdo() {
+  // 最新の運行記録のendOdoを「現在のODO」として使う
+  const completed = data.trips.filter(t => t.endOdo).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  if (completed.length > 0 && completed[0].endOdo) return completed[0].endOdo;
+  // なければ整備記録の最新ODO
+  if (data.maintenances.length > 0) {
+    const sorted = [...data.maintenances].sort((a, b) => b.odo - a.odo);
+    return sorted[0].odo;
+  }
+  return null;
+}
+
+function renderMaintenance() {
+  const sumEl = document.getElementById('maintSummary');
+  const list  = data.maintenances || [];
+
+  // 次回オイル交換目安サマリー
+  const oilTypes = ['オイル交換', 'エレメント交換', 'オイル＋エレメント'];
+  const oilMaints = list.filter(m => oilTypes.indexOf(m.type) >= 0 && m.nextOdo);
+  if (oilMaints.length > 0) {
+    const latest = [...oilMaints].sort((a, b) => b.odo - a.odo)[0];
+    const currentOdo = getCurrentOdo();
+    let cls = '', subText = '';
+    if (currentOdo) {
+      const remain = latest.nextOdo - currentOdo;
+      if (remain <= 500)  cls = 'danger';
+      else if (remain <= 1000) cls = 'warn';
+      subText = '現在ODO ' + currentOdo.toLocaleString() + 'km ／ 残り '
+              + (remain >= 0 ? remain.toLocaleString() + 'km' : '⚠️ ' + Math.abs(remain).toLocaleString() + 'km 超過');
+    } else {
+      subText = '前回 ' + formatDate(latest.date) + '（ODO ' + latest.odo.toLocaleString() + 'km）';
+    }
+    sumEl.innerHTML = '<div class="maint-summary ' + cls + '">'
+      + '<div class="ms-title">🛢 次回オイル交換目安</div>'
+      + '<div class="ms-main">ODO ' + latest.nextOdo.toLocaleString() + 'km</div>'
+      + '<div class="ms-sub">' + subText + '</div>'
+      + '</div>';
+  } else {
+    sumEl.innerHTML = '';
+  }
+
+  // 履歴一覧
+  const listEl = document.getElementById('maintList');
+  if (list.length === 0) {
+    listEl.innerHTML = '<div class="empty-state"><div class="emoji">🔧</div><p>整備記録がまだありません<br>下のボタンから追加してください</p></div>';
+    return;
+  }
+  const sorted = [...list].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.odo - a.odo);
+  listEl.innerHTML = sorted.map(m => {
+    const nextHtml = m.nextOdo ? '<div class="m-meta">次回目安：' + m.nextOdo.toLocaleString() + 'km</div>' : '';
+    const memoHtml = m.memo ? '<div class="m-memo">' + m.memo + '</div>' : '';
+    return '<div class="maint-item">'
+      + '<div class="m-left">'
+      +   '<div class="m-type">🔧 ' + m.type + '</div>'
+      +   '<div class="m-meta">' + formatDate(m.date) + '</div>'
+      +   nextHtml
+      +   memoHtml
+      + '</div>'
+      + '<div class="m-right">'
+      +   '<div class="m-odo">' + m.odo.toLocaleString() + 'km</div>'
+      +   '<button class="m-edit" onclick="openMaintModal(' + m.id + ')">✏️ 編集</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ===== Now ボタン =====
+function setNow(fieldId) {
+  document.getElementById(fieldId).value = nowTime();
+}
+
+// ===== 事業者情報 =====
+function saveBizInfo() {
+  data.bizInfo = {
+    name:     document.getElementById('biz_name').value,
+    driver:   document.getElementById('biz_driver').value,
+    delivery: document.getElementById('biz_delivery').value,
+    invoice:  document.getElementById('biz_invoice').value,
+    kumiai:   document.getElementById('biz_kumiai').value,
+    plate:    document.getElementById('biz_plate').value,
+  };
+  saveData();
+  updateHeaderPlate();
+  updateHeaderBizName();
+  updateDocTitle();
+}
+function loadBizInfo() {
+  if (!data.bizInfo) return;
+  document.getElementById('biz_name').value     = data.bizInfo.name     || '';
+  document.getElementById('biz_driver').value   = data.bizInfo.driver   || '';
+  document.getElementById('biz_delivery').value = data.bizInfo.delivery || '';
+  document.getElementById('biz_invoice').value  = data.bizInfo.invoice  || '';
+  document.getElementById('biz_kumiai').value   = data.bizInfo.kumiai   || '';
+  document.getElementById('biz_plate').value    = data.bizInfo.plate    || '';
+  updateHeaderPlate();
+  updateHeaderBizName();
+  updateDocTitle();
+}
+function updateHeaderPlate() {
+  const plate = data.bizInfo && data.bizInfo.plate ? data.bizInfo.plate.trim() : '';
+  const el = document.getElementById('headerPlate');
+  if (plate) {
+    el.textContent = '🚗 ' + plate;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+function updateHeaderBizName() {
+  const name = data.bizInfo && data.bizInfo.name ? data.bizInfo.name.trim() : '';
+  const el = document.getElementById('headerBizName');
+  if (el) el.textContent = name || 'nippi';
+}
+function updateDocTitle() {
+  const name = data.bizInfo && data.bizInfo.name ? data.bizInfo.name.trim() : '';
+  document.title = name ? `${name} - 運行管理 (nippi)` : 'nippi - 軽貨物の運行管理';
+}
+
+// ===== 初回ウェルカム＆屋号入力 =====
+function showFirstRunWelcome() {
+  // 既に屋号が入力済みなら何もしない
+  if (data.bizInfo && data.bizInfo.name) return;
+  // ようこそモーダル表示
+  setTimeout(() => {
+    const name = prompt(
+      '🚚 nippi へようこそ！\n\n' +
+      '軽貨物ドライバーのための運行管理アプリです。\n' +
+      '\n以下を記録できます：\n' +
+      '・日々の運行日報（法令対応）\n' +
+      '・売上・経費・粗利益\n' +
+      '・車両整備・書類期限管理\n' +
+      '・CSV出力（確定申告）/ PDF出力（運輸局報告）\n' +
+      '\nまず、あなたの屋号 / 事業者名を入力してください：',
+      ''
+    );
+    if (name && name.trim()) {
+      data.bizInfo = data.bizInfo || {};
+      data.bizInfo.name = name.trim();
+      saveData();
+      document.getElementById('biz_name').value = name.trim();
+      updateHeaderBizName();
+      updateDocTitle();
+      alert('✅ ' + name.trim() + ' を登録しました！\n書類タブで他の事業者情報も登録できます。');
+    }
+  }, 300);
+}
+
+// ===== 初期化 =====
+loadData();
+migrateCompressPhotos(); // 既存写真の自動圧縮（初回のみ）
+updateHeaderDate();
+renderInspection();
+renderAlcohol();
+renderTrips();
+renderDocs();
+loadBizInfo();
+historyMonth = new Date();
+renderHistory();
+renderMaintenance();
+showFirstRunWelcome();
+</script>
+</body>
+</html>
