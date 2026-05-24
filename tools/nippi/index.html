@@ -740,6 +740,16 @@
   </div>
 
   <div class="summary-grid">
+    <div class="summary-box" style="border-color:#FFB300; background:#FFFDE7;">
+      <div class="s-label">💰 売上合計</div>
+      <div class="s-value" id="sumRevenue" style="color:#F57F17;">0</div>
+      <div class="s-unit">円</div>
+    </div>
+    <div class="summary-box" style="border-color:#66BB6A; background:#E8F5E9;">
+      <div class="s-label">📈 粗利益</div>
+      <div class="s-value" id="sumProfit" style="color:#2E7D32;">0</div>
+      <div class="s-unit">円</div>
+    </div>
     <div class="summary-box">
       <div class="s-label">案件数</div>
       <div class="s-value" id="sumTrips">0</div>
@@ -942,7 +952,11 @@
     </div>
 
     <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
-      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">💴 経費（任意）</div>
+      <div style="font-size:12px; color:var(--text-mid); font-weight:700; margin-bottom:12px;">💰 売上・経費</div>
+      <div class="form-group">
+        <label>売上金額（円）</label>
+        <input type="number" id="f_revenue" placeholder="例：15000" inputmode="numeric" pattern="[0-9]*" style="border-color:#FFB300; background:#FFFDE7;">
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label>高速代（円）</label>
@@ -1434,6 +1448,7 @@ function openTripModal(id) {
     document.getElementById('f_breakEnd').value       = t.breakEnd || '';
     document.getElementById('f_breakLocation').value  = t.breakLocation || '';
     document.getElementById('f_waypoints').value      = t.waypoints || '';
+    document.getElementById('f_revenue').value        = t.revenue || '';
     document.getElementById('f_toll').value           = t.toll || '';
     document.getElementById('f_fuel').value           = t.fuel || '';
     document.getElementById('f_memo').value           = t.memo || '';
@@ -1442,7 +1457,7 @@ function openTripModal(id) {
     document.getElementById('f_date').value = today();
     ['f_client','f_from','f_to','f_startTime','f_startOdo',
      'f_endTime','f_endOdo','f_breakStart','f_breakEnd','f_breakLocation',
-     'f_waypoints','f_toll','f_fuel','f_memo']
+     'f_waypoints','f_revenue','f_toll','f_fuel','f_memo']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('f_type').value = '';
   }
@@ -1467,6 +1482,7 @@ function saveTrip() {
   const breakEnd      = document.getElementById('f_breakEnd').value;
   const breakLocation = document.getElementById('f_breakLocation').value.trim();
   const waypoints     = document.getElementById('f_waypoints').value.trim();
+  const revenue       = parseInt(document.getElementById('f_revenue').value) || null;
   const toll          = parseInt(document.getElementById('f_toll').value) || null;
   const fuel          = parseInt(document.getElementById('f_fuel').value) || null;
   const memo          = document.getElementById('f_memo').value.trim();
@@ -1479,9 +1495,9 @@ function saveTrip() {
 
   if (editingTripId) {
     const idx = data.trips.findIndex(t => t.id === editingTripId);
-    data.trips[idx] = { ...data.trips[idx], date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, toll, fuel, memo, status };
+    data.trips[idx] = { ...data.trips[idx], date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status };
   } else {
-    data.trips.push({ id: Date.now(), date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, toll, fuel, memo, status });
+    data.trips.push({ id: Date.now(), date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status });
   }
   saveData();
   closeTripModal();
@@ -1553,7 +1569,8 @@ function renderTrips() {
           ${t.endOdo ? `<div class="odo">ODO: ${t.endOdo.toLocaleString()}km</div>` : ''}
         </div>
       </div>
-      ${(km || dur) ? `<div class="trip-calc">
+      ${(km || dur || t.revenue || t.toll) ? `<div class="trip-calc">
+        ${t.revenue ? `<span style="background:#FFF8E1;color:#F57F17;">💰 ¥${t.revenue.toLocaleString()}</span>` : ''}
         ${km ? `<span>🛣 ${km}</span>` : ''}
         ${dur ? `<span>⏱ ${dur}</span>` : ''}
         ${t.toll ? `<span>🛣 高速 ¥${t.toll.toLocaleString()}</span>` : ''}
@@ -1799,14 +1816,22 @@ function renderHistory() {
   const monthStr = `${y}-${String(m).padStart(2,'0')}`;
   const trips = data.trips.filter(t => t.date && t.date.startsWith(monthStr) && t.status === 'completed');
 
-  const totalKm   = trips.reduce((s, t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
-  const totalToll = trips.reduce((s, t) => s + (t.toll || 0), 0);
-  const totalFuel = trips.reduce((s, t) => s + (t.fuel || 0), 0);
+  const totalRevenue = trips.reduce((s, t) => s + (t.revenue || 0), 0);
+  const totalKm      = trips.reduce((s, t) => s + ((t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : 0), 0);
+  const totalToll    = trips.reduce((s, t) => s + (t.toll || 0), 0);
+  const totalFuel    = trips.reduce((s, t) => s + (t.fuel || 0), 0);
+  const totalProfit  = totalRevenue - totalToll - totalFuel;
 
-  document.getElementById('sumTrips').textContent = trips.length;
-  document.getElementById('sumKm').textContent    = totalKm.toLocaleString();
-  document.getElementById('sumToll').textContent  = totalToll.toLocaleString();
-  document.getElementById('sumFuel').textContent  = totalFuel.toLocaleString();
+  document.getElementById('sumRevenue').textContent = totalRevenue.toLocaleString();
+  document.getElementById('sumProfit').textContent  = totalProfit.toLocaleString();
+  document.getElementById('sumTrips').textContent   = trips.length;
+  document.getElementById('sumKm').textContent      = totalKm.toLocaleString();
+  document.getElementById('sumToll').textContent    = totalToll.toLocaleString();
+  document.getElementById('sumFuel').textContent    = totalFuel.toLocaleString();
+
+  // 利益がマイナスの場合は赤色に
+  const profitEl = document.getElementById('sumProfit');
+  profitEl.style.color = totalProfit < 0 ? '#C62828' : '#2E7D32';
 
   const el = document.getElementById('historyList');
   if (trips.length === 0) {
@@ -1823,7 +1848,7 @@ function renderHistory() {
         <div class="h-route">${t.date} ${(t.from||t.to) ? `／ ${t.from||'?'} → ${t.to||'?'}` : ''}</div>
       </div>
       <div class="h-right">
-        <div class="h-km">🛣 ${km}</div>
+        ${t.revenue ? `<div class="h-km" style="color:#F57F17;">💰 ¥${t.revenue.toLocaleString()}</div>` : `<div class="h-km">🛣 ${km}</div>`}
         <div class="h-time">⏱ ${dur}</div>
       </div>
     </div>`;
