@@ -1284,15 +1284,24 @@ function exportMonthlyPDF() {
 <meta charset="UTF-8">
 <title>運行記録簿 ${y}年${m}月</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm; }
+  @page {
+    size: A4 landscape;
+    margin: 12mm 12mm 16mm 12mm;
+    @bottom-center {
+      content: "ページ " counter(page) " / " counter(pages);
+      font-family: 'Hiragino Sans','Noto Sans JP',sans-serif;
+      font-size: 9px;
+      color: #666;
+    }
+  }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Hiragino Sans','Noto Sans JP',sans-serif; font-size:10px; color:#222; line-height:1.4; }
-  .header-block { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; border-bottom:2px solid #333; padding-bottom:8px; }
+  .header-block { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; border-bottom:2px solid #333; padding-bottom:8px; page-break-inside: avoid; page-break-after: avoid; }
   .header-block h1 { font-size:18px; font-weight:700; }
   .header-block .period { font-size:13px; margin-top:4px; }
   .biz-info { text-align:right; font-size:10px; line-height:1.6; }
   .biz-info .name { font-size:13px; font-weight:700; }
-  .summary-row { display:flex; gap:12px; margin-bottom:10px; }
+  .summary-row { display:flex; gap:12px; margin-bottom:10px; page-break-inside: avoid; page-break-after: avoid; }
   .summary-item { flex:1; border:1px solid #999; border-radius:4px; padding:6px 8px; text-align:center; }
   .summary-item .label { font-size:9px; color:#666; }
   .summary-item .val { font-size:14px; font-weight:700; }
@@ -1301,14 +1310,23 @@ function exportMonthlyPDF() {
   .summary-item.profit { border-color:#2E7D32; background:#E8F5E9; }
   .summary-item.profit .val { color:#2E7D32; }
   table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+  thead { display: table-header-group; }
+  tbody { display: table-row-group; }
+  tbody tr { page-break-inside: avoid; }
+  tfoot { display: table-footer-group; }
   th, td { border:1px solid #999; padding:3px 4px; text-align:center; font-size:8.5px; }
-  th { background:#f0f0f0; font-weight:700; font-size:8px; white-space:nowrap; }
-  tr:nth-child(even) td { background:#fafafa; }
-  .total-row td { background:#f0f0f0; font-weight:700; }
-  .footer { margin-top:12px; display:flex; justify-content:space-between; font-size:9px; color:#666; }
-  .stamp-area { display:flex; gap:16px; margin-top:10px; }
+  th { background:#f0f0f0 !important; font-weight:700; font-size:8px; white-space:nowrap; }
+  tbody tr:nth-child(even) td { background:#fafafa; }
+  .total-row td { background:#f0f0f0 !important; font-weight:700; }
+  .total-row { page-break-inside: avoid; }
+  .footer { margin-top:12px; display:flex; justify-content:space-between; font-size:9px; color:#666; page-break-inside: avoid; }
+  .stamp-area { display:flex; gap:16px; margin-top:10px; page-break-inside: avoid; page-break-before: avoid; }
   .stamp-box { width:70px; height:70px; border:1px solid #999; text-align:center; font-size:9px; padding-top:4px; }
-  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .footer-block { page-break-inside: avoid; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .summary-item.revenue, .summary-item.profit, .total-row td, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head>
 <body>
@@ -1378,15 +1396,17 @@ function exportMonthlyPDF() {
   </tbody>
 </table>
 
-<div class="stamp-area">
-  <div class="stamp-box">管理者</div>
-  <div class="stamp-box">運転者</div>
-  <div class="stamp-box">確認者</div>
-</div>
+<div class="footer-block">
+  <div class="stamp-area">
+    <div class="stamp-box">管理者</div>
+    <div class="stamp-box">運転者</div>
+    <div class="stamp-box">確認者</div>
+  </div>
 
-<div class="footer">
-  <div>出力日：${new Date().toLocaleDateString('ja-JP')}</div>
-  <div>本書は運行管理システムにより自動生成されました</div>
+  <div class="footer">
+    <div>出力日：${new Date().toLocaleDateString('ja-JP')}</div>
+    <div>本書は nippi 運行管理アプリにより自動生成されました</div>
+  </div>
 </div>
 
 </body>
