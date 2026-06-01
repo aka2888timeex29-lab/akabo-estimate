@@ -1299,6 +1299,7 @@ function exportMonthlyPDF() {
   .header-block { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; border-bottom:2px solid #333; padding-bottom:8px; page-break-inside: avoid; page-break-after: avoid; }
   .header-block h1 { font-size:18px; font-weight:700; }
   .header-block .period { font-size:13px; margin-top:4px; }
+  .header-block .legal-note { font-size:9px; color:#666; margin-top:4px; letter-spacing:0.3px; }
   .biz-info { text-align:right; font-size:10px; line-height:1.6; }
   .biz-info .name { font-size:13px; font-weight:700; }
   .summary-row { display:flex; gap:12px; margin-bottom:10px; page-break-inside: avoid; page-break-after: avoid; }
@@ -1321,7 +1322,9 @@ function exportMonthlyPDF() {
   .total-row { page-break-inside: avoid; }
   .footer { margin-top:12px; display:flex; justify-content:space-between; font-size:9px; color:#666; page-break-inside: avoid; }
   .stamp-area { display:flex; gap:16px; margin-top:10px; page-break-inside: avoid; page-break-before: avoid; }
-  .stamp-box { width:70px; height:70px; border:1px solid #999; text-align:center; font-size:9px; padding-top:4px; }
+  .stamp-box { width:80px; height:80px; border:1px solid #999; text-align:center; font-size:9px; padding-top:6px; background:#fcfcfc; }
+  .stamp-box .label { display:block; margin-bottom:4px; }
+  .stamp-box .hint { display:block; font-size:7px; color:#999; }
   .footer-block { page-break-inside: avoid; }
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1335,13 +1338,14 @@ function exportMonthlyPDF() {
   <div>
     <h1>運行記録簿</h1>
     <div class="period">${y}年${m}月（${toReiwa(y+'-'+String(m).padStart(2,'0')+'-01').split('.').slice(0,2).join('.')}）</div>
+    <div class="legal-note">貨物自動車運送事業法 及び関係省令 に基づく運行記録</div>
   </div>
   <div class="biz-info">
     <div class="name">${esc(biz.driver || '（事業者名未設定）')}</div>
-    ${biz.delivery ? '<div>届出番号：'+esc(biz.delivery)+'</div>' : ''}
-    ${biz.invoice ? '<div>インボイス：'+esc(biz.invoice)+'</div>' : ''}
+    ${biz.delivery ? '<div>事業届出番号：'+esc(biz.delivery)+'</div>' : ''}
+    ${biz.invoice ? '<div>適格請求書発行事業者番号：'+esc(biz.invoice)+'</div>' : ''}
     ${biz.kumiai ? '<div>組合員番号：'+esc(biz.kumiai)+'</div>' : ''}
-    ${biz.plate ? '<div>車両：'+esc(biz.plate)+'</div>' : ''}
+    ${biz.plate ? '<div>使用車両：'+esc(biz.plate)+'</div>' : ''}
   </div>
 </div>
 
@@ -1398,13 +1402,13 @@ function exportMonthlyPDF() {
 
 <div class="footer-block">
   <div class="stamp-area">
-    <div class="stamp-box">管理者</div>
-    <div class="stamp-box">運転者</div>
-    <div class="stamp-box">確認者</div>
+    <div class="stamp-box"><span class="label">管理者印</span><span class="hint">（事業者）</span></div>
+    <div class="stamp-box"><span class="label">運転者印</span><span class="hint">（記録者）</span></div>
+    <div class="stamp-box"><span class="label">確認者印</span><span class="hint">（点検者）</span></div>
   </div>
 
   <div class="footer">
-    <div>出力日：${new Date().toLocaleDateString('ja-JP')}</div>
+    <div>出力日：${new Date().toLocaleDateString('ja-JP')} ／ 保存期間：1年（業務記録 ／ 貨物自動車運送事業法 関係省令に基づく）</div>
     <div>本書は nippi 運行管理アプリにより自動生成されました</div>
   </div>
 </div>
@@ -1511,6 +1515,28 @@ function printTripRecord(id) {
     document.head.appendChild(style);
   }
 
+  // A4印刷時のレイアウト最適化スタイルを動的に追加
+  var printStyleId = 'tripRecordPrintCSS';
+  if (!document.getElementById(printStyleId)) {
+    var printStyle = document.createElement('style');
+    printStyle.id = printStyleId;
+    printStyle.textContent = [
+      '@media print {',
+      '  @page { size: A4 portrait; margin: 10mm 12mm; }',
+      '  #printOverlay { font-size: 10px !important; line-height: 1.35 !important; padding: 0 !important; }',
+      '  #printOverlay h1 { font-size: 15px !important; margin: 0 0 4px !important; }',
+      '  #printOverlay table { margin-bottom: 5px !important; page-break-inside: avoid !important; }',
+      '  #printOverlay th, #printOverlay td { padding: 2.5px 5px !important; font-size: 9.5px !important; }',
+      '  #printOverlay th { width: 115px !important; }',
+      '  #printOverlay .st { font-size: 9.5px !important; padding: 3px 6px !important; }',
+      '  #printOverlay .note { font-size: 7.5px !important; margin-bottom: 5px !important; line-height: 1.4 !important; }',
+      '  #printOverlay .ft { font-size: 8.5px !important; margin-top: 6px !important; }',
+      '  #printOverlay .footer-block { page-break-inside: avoid !important; }',
+      '}'
+    ].join('\n');
+    document.head.appendChild(printStyle);
+  }
+
   overlay.innerHTML = '<div class="print-bar">'
     + '<button class="p-btn" onclick="window.print()">🖨 印刷 / PDF保存</button>'
     + '<button onclick="document.getElementById(\'printOverlay\').classList.remove(\'open\')">✕ 閉じる</button>'
@@ -1550,11 +1576,13 @@ function printTripRecord(id) {
     + '<tr><th>荷主の確認の有無</th><td colspan="4"></td></tr>'
     + '<tr><th>備考</th><td colspan="4"></td></tr>'
     + '</table>'
+    + '<div class="footer-block">'
     + '<table>'
     + '<tr><td colspan="2" class="st">事故、著しい運行の遅延、その他の異常な状態が発生した場合</td></tr>'
     + '<tr><th>概要及び要因</th><td style="height:40px">' + (t.memo||'') + '</td></tr>'
     + '</table>'
-    + '<p class="ft">（保存期間：1年）　nippi 運行管理アプリより出力</p>';
+    + '<p class="ft">（保存期間：1年）　nippi 運行管理アプリより出力</p>'
+    + '</div>';
 
   overlay.classList.add('open');
   closeTripModal();
