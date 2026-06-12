@@ -64,3 +64,33 @@ CLAUDE.md
 
 # Macの隠しファイル（全階層）
 **/.DS_Store
+
+# ===== 内部コード（このリポジトリはGitHub Pages公開用。内部システムは別Privateリポジトリで管理） =====
+# 名刺管理システム（個人情報DBに接続するため非公開）
+tools/meishi-api/
+tools/meishi-app/
+
+# 朝の業務インテリジェンスWorker
+workers/
+
+# AI会社アプリ（Next.js）と関連設定
+src/
+electron/
+dist-electron/
+supabase-setup.sql
+next.config.mjs
+postcss.config.mjs
+tailwind.config.ts
+tsconfig.json
+.eslintrc.json
+package.json
+package-lock.json
+.env.local.example
+
+# 内部ドキュメント・エージェント設定
+AGENTS.md
+README.md
+.agents/
+
+# マグネット看板デザイン（内部資料）
+tools/signboard/
