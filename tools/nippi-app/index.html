@@ -928,6 +928,10 @@
           <input type="number" id="f_endOdo" placeholder="例：12398" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
+      <div class="form-group">
+        <label>到着日（日をまたいだ場合のみ）</label>
+        <input type="date" id="f_endDate">
+      </div>
     </div>
 
     <div style="border-top:1.5px dashed var(--border); margin: 4px 0 14px; padding-top:14px;">
@@ -1172,7 +1176,7 @@ function exportCSV() {
 
   const rows = [...trips].sort((a,b) => a.date.localeCompare(b.date)).map(t => {
     const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : '';
-    const dur = calcDuration(t.startTime, t.endTime) || '';
+    const dur = calcDuration(t.startTime, t.endTime, tripDays(t)) || '';
     return [
       t.date || '',
       csvEscape(t.client || ''),
@@ -1258,7 +1262,7 @@ function exportMonthlyPDF() {
 
   const tripRows = trips.map((t, i) => {
     const km = (t.startOdo && t.endOdo) ? t.endOdo - t.startOdo : '';
-    const dur = calcDuration(t.startTime, t.endTime) || '';
+    const dur = calcDuration(t.startTime, t.endTime, tripDays(t)) || '';
     return `<tr>
       <td>${i+1}</td>
       <td>${t.date ? t.date.slice(5).replace('-','/') : ''}</td>
@@ -1606,14 +1610,20 @@ function daysUntil(dateStr) {
   const diff = new Date(dateStr) - new Date(today());
   return Math.ceil(diff / 86400000);
 }
-function calcDuration(start, end) {
+function calcDuration(start, end, dayDiff = 0) {
   if (!start || !end) return null;
   const [sh, sm] = start.split(':').map(Number);
   const [eh, em] = end.split(':').map(Number);
-  const mins = (eh * 60 + em) - (sh * 60 + sm);
+  let mins = (eh * 60 + em) - (sh * 60 + sm) + (dayDiff * 1440);
+  if (dayDiff === 0 && mins < 0) mins += 1440; // 到着日未入力でも日またぎと推定
   if (mins < 0) return null;
   const h = Math.floor(mins / 60), m = mins % 60;
   return h > 0 ? `${h}時間${m > 0 ? m+'分' : ''}` : `${m}分`;
+}
+function tripDays(t) {
+  if (!t || !t.date || !t.endDate || t.endDate === t.date) return 0;
+  const d = Math.round((new Date(t.endDate) - new Date(t.date)) / 86400000);
+  return d > 0 ? d : 0;
 }
 function nowTime() {
   const n = new Date();
@@ -1728,6 +1738,7 @@ function openTripModal(id) {
     document.getElementById('f_startTime').value      = t.startTime || '';
     document.getElementById('f_startOdo').value       = t.startOdo || '';
     document.getElementById('f_endTime').value        = t.endTime || '';
+    document.getElementById('f_endDate').value        = t.endDate || '';
     document.getElementById('f_endOdo').value         = t.endOdo || '';
     document.getElementById('f_breakStart').value     = t.breakStart || '';
     document.getElementById('f_breakEnd').value       = t.breakEnd || '';
@@ -1741,7 +1752,7 @@ function openTripModal(id) {
     document.getElementById('tripModalTitle').textContent = '📋 案件を追加';
     document.getElementById('f_date').value = today();
     ['f_client','f_from','f_to','f_startTime','f_startOdo',
-     'f_endTime','f_endOdo','f_breakStart','f_breakEnd','f_breakLocation',
+     'f_endTime','f_endDate','f_endOdo','f_breakStart','f_breakEnd','f_breakLocation',
      'f_waypoints','f_revenue','f_toll','f_fuel','f_memo']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('f_type').value = '';
@@ -1762,6 +1773,7 @@ function saveTrip() {
   const startTime     = document.getElementById('f_startTime').value;
   const startOdo      = parseInt(document.getElementById('f_startOdo').value) || null;
   const endTime       = document.getElementById('f_endTime').value;
+  let endDate         = document.getElementById('f_endDate').value || null;
   const endOdo        = parseInt(document.getElementById('f_endOdo').value) || null;
   const breakStart    = document.getElementById('f_breakStart').value;
   const breakEnd      = document.getElementById('f_breakEnd').value;
@@ -1773,6 +1785,8 @@ function saveTrip() {
   const memo          = document.getElementById('f_memo').value.trim();
 
   if (!client) { alert('顧客名・案件名を入力してください'); return; }
+  if (endDate && endDate === date) endDate = null;
+  if (endDate && endDate < date) { alert('到着日が出発日より前になっています'); return; }
 
   let status = 'planned';
   if (startTime && endTime) status = 'completed';
@@ -1780,9 +1794,9 @@ function saveTrip() {
 
   if (editingTripId) {
     const idx = data.trips.findIndex(t => t.id === editingTripId);
-    data.trips[idx] = { ...data.trips[idx], date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status };
+    data.trips[idx] = { ...data.trips[idx], date, client, from, to, type, startTime, startOdo, endTime, endDate, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status };
   } else {
-    data.trips.push({ id: Date.now(), date, client, from, to, type, startTime, startOdo, endTime, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status });
+    data.trips.push({ id: Date.now(), date, client, from, to, type, startTime, startOdo, endTime, endDate, endOdo, breakStart, breakEnd, breakLocation, waypoints, revenue, toll, fuel, memo, status });
   }
   saveData();
   closeTripModal();
@@ -1809,16 +1823,20 @@ function endTrip(id) {
   const t = data.trips.find(t => t.id === id);
   const odo = prompt('到着ODOメーターを入力（km）\n※時間制の場合は空欄のままOKで完了できます');
   if (odo === null) return; // キャンセル
+  const td = today();
+  if (t.date && t.date !== td) t.endDate = td; // 日をまたいだ運行
   t.endTime = nowTime();
   t.endOdo  = odo ? parseInt(odo) : null;
   t.status  = 'completed';
   saveData();
   renderTrips();
+  renderHistory();
 }
 
 function renderTrips() {
   const t = today();
-  const trips = data.trips.filter(t2 => t2.date === t);
+  // 今日の案件＋（日またぎ対応）過去日の未完了案件も表示する
+  const trips = data.trips.filter(t2 => t2.date === t || (t2.status === 'in-progress' && t2.date && t2.date < t));
   const el = document.getElementById('tripList');
 
   if (trips.length === 0) {
@@ -1828,7 +1846,8 @@ function renderTrips() {
 
   el.innerHTML = trips.map(t => {
     const km = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : null;
-    const dur = calcDuration(t.startTime, t.endTime);
+    const dur = calcDuration(t.startTime, t.endTime, tripDays(t));
+    const isPastStart = t.date && t.date < today();
     const statusLabel = { planned: '予定', 'in-progress': '運行中', completed: '完了' }[t.status];
 
     return `
@@ -1838,6 +1857,7 @@ function renderTrips() {
           ${t.client || '（案件名なし）'}
           ${t.type ? `<span class="trip-type-badge ${t.type}">${t.type}</span>` : ''}
           ${t.fromCal ? '<span class="trip-type-badge cal">📅</span>' : ''}
+          ${isPastStart ? `<span class="trip-type-badge" style="background:#FFF3E0;color:#E65100;">${t.date.slice(5).replace('-','/')}発</span>` : ''}
         </div>
         <div class="trip-status ${t.status}">${statusLabel}</div>
       </div>
@@ -1849,7 +1869,7 @@ function renderTrips() {
           ${t.startOdo ? `<div class="odo">ODO: ${t.startOdo.toLocaleString()}km</div>` : ''}
         </div>
         <div class="time-box">
-          <div class="label">🏁 到着</div>
+          <div class="label">🏁 到着${t.endDate && t.endDate !== t.date ? `（${t.endDate.slice(5).replace('-','/')}）` : ''}</div>
           <div class="value">${t.endTime || '--:--'}</div>
           ${t.endOdo ? `<div class="odo">ODO: ${t.endOdo.toLocaleString()}km</div>` : ''}
         </div>
@@ -2119,13 +2139,31 @@ function renderHistory() {
   profitEl.style.color = totalProfit < 0 ? '#C62828' : '#2E7D32';
 
   const el = document.getElementById('historyList');
+
+  // 未完了の運行（過去日で完了していないもの）を月に関係なく警告表示
+  const tdy = today();
+  const stuck = data.trips.filter(t => t.status !== 'completed' && t.date && t.date < tdy);
+  const stuckHtml = stuck.length === 0 ? '' :
+    `<div style="background:#FFF3E0; border:1.5px solid #FFB74D; border-radius:10px; padding:10px 12px; margin-bottom:12px;">
+      <div style="font-size:13px; font-weight:700; color:#E65100; margin-bottom:6px;">⚠️ 未完了の運行が ${stuck.length} 件あります（タップして到着記録・修正）</div>
+      ${stuck.map(t => `
+      <div class="history-item" onclick="openTripModal(${t.id})" style="cursor:pointer; background:#fff;">
+        <div class="h-left">
+          <div class="h-client">${esc(t.client) || '（案件名なし）'}</div>
+          <div class="h-route">${t.date} ${(t.from||t.to) ? `／ ${esc(t.from)||'?'} → ${esc(t.to)||'?'}` : ''}</div>
+        </div>
+        <div class="h-right"><div class="h-km" style="color:#E65100;">${t.status === 'in-progress' ? '🏁 到着未記録' : '未実施'}</div></div>
+      </div>`).join('')}
+    </div>`;
+
   if (trips.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="emoji">📊</div><p>この月の完了案件はありません</p></div>`;
+    el.innerHTML = stuckHtml + `<div class="empty-state"><div class="emoji">📊</div><p>この月の完了案件はありません</p>
+      <button onclick="changeMonth(-1)" style="margin-top:10px; padding:10px 18px; border:1.5px solid var(--border); border-radius:10px; background:#fff; font-size:14px; font-weight:700; cursor:pointer;">‹ 前の月を見る</button></div>`;
     return;
   }
-  el.innerHTML = [...trips].reverse().map(t => {
+  el.innerHTML = stuckHtml + [...trips].reverse().map(t => {
     const km  = (t.startOdo && t.endOdo) ? `${t.endOdo - t.startOdo}km` : '-';
-    const dur = calcDuration(t.startTime, t.endTime) || '-';
+    const dur = calcDuration(t.startTime, t.endTime, tripDays(t)) || '-';
     return `
     <div class="history-item" onclick="openTripModal(${t.id})" style="cursor:pointer;">
       <div class="h-left">
