@@ -1170,7 +1170,7 @@ function exportCSV() {
   const BOM = '﻿';
   const headers = [
     '日付','顧客名','仕事種別','出発地','目的地',
-    '出発時刻','到着時刻','出発ODO','到着ODO','走行距離(km)',
+    '出発時刻','到着時刻','到着日','出発ODO','到着ODO','走行距離(km)',
     '稼働時間','売上金額','高速代','給油金額','メモ','ステータス'
   ];
 
@@ -1185,6 +1185,7 @@ function exportCSV() {
       csvEscape(t.to || ''),
       t.startTime || '',
       t.endTime || '',
+      t.endDate || '',
       t.startOdo || '',
       t.endOdo || '',
       km,
@@ -1270,7 +1271,7 @@ function exportMonthlyPDF() {
       <td>${esc(t.type || '')}</td>
       <td style="text-align:left;">${esc(t.from || '')} → ${esc(t.to || '')}</td>
       <td>${t.startTime || ''}</td>
-      <td>${t.endTime || ''}</td>
+      <td>${t.endDate && t.endDate !== t.date ? t.endDate.slice(5).replace('-','/')+' ' : ''}${t.endTime || ''}</td>
       <td>${dur}</td>
       <td>${t.startOdo ? t.startOdo.toLocaleString() : ''}</td>
       <td>${t.endOdo ? t.endOdo.toLocaleString() : ''}</td>
@@ -1551,7 +1552,7 @@ function printTripRecord(id) {
     + '<tr><th>車両番号</th><td colspan="5">' + (biz.plate||'') + '</td></tr>'
     + '<tr><th>日にち</th><td colspan="5">' + toReiwa(t.date) + '</td></tr>'
     + '<tr><th>業務開始地点・日時</th><td colspan="2">' + (t.from||'') + '</td><td colspan="3">' + (t.startTime||'') + '</td></tr>'
-    + '<tr><th>業務終了地点・日時</th><td colspan="2">' + (t.to||'') + '</td><td colspan="3">' + (t.endTime||'') + '</td></tr>'
+    + '<tr><th>業務終了地点・日時</th><td colspan="2">' + (t.to||'') + '</td><td colspan="3">' + ((t.endDate && t.endDate !== t.date) ? t.endDate.replace(/-/g,'/') + ' ' : '') + (t.endTime||'') + '</td></tr>'
     + '<tr><th>走行距離計の表示</th><td>出発時</td><td>' + (t.startOdo||'') + ' km</td><td>到着時</td><td colspan="2">' + (t.endOdo||'') + ' km</td></tr>'
     + '<tr><th>業務に従事した距離</th><td colspan="5">' + km + ' km</td></tr>'
     + '</table>'
