@@ -661,6 +661,33 @@ function estimateRoute(o, d) {
   return { km, toll, isEstimate: true };
 }
 
+// ===== 道のり距離（OpenStreetMapルート検索・無料/APIキー不要） =====
+const roadKmCache = {};
+async function fetchRoadKm(o, d) {
+  const cacheKey = o + '>' + d;
+  if (roadKmCache[cacheKey]) return roadKmCache[cacheKey];
+  const c1 = CITY_COORDS[o], c2 = CITY_COORDS[d];
+  if (!c1 || !c2) return null;
+  const url = `https://router.project-osrm.org/route/v1/driving/${c1[1]},${c1[0]};${c2[1]},${c2[0]}?overview=false`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    const json = await res.json();
+    if (json.code === 'Ok' && json.routes && json.routes[0]) {
+      const km = Math.round(json.routes[0].distance / 1000);
+      const result = { km, toll: km > 40 ? Math.round(km * 20 / 100) * 100 : 0 };
+      roadKmCache[cacheKey] = result;
+      return result;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 let fareType = 'distance';
 let hwyMode = 'auto';
 
@@ -701,8 +728,15 @@ function onRouteChange() {
       const est = estimateRoute(o, d);
       if (est) {
         info.style.display = 'block';
-        info.textContent = `📏 距離（推定）: 約${est.km}km`;
+        info.textContent = `📏 道のりを計測中…（概算 約${est.km}km）`;
         box.classList.remove('show');
+        fetchRoadKm(o, d).then(road => {
+          if (document.getElementById('origin').value !== o ||
+              document.getElementById('destination').value !== d) return;
+          info.textContent = road
+            ? `📏 距離（道のり）: ${road.km}km`
+            : `📏 距離（推定）: 約${est.km}km`;
+        });
       } else {
         info.style.display = 'block';
         info.textContent = '⚠️ このルートは距離を手入力してください';
@@ -753,14 +787,14 @@ function calcTime(km, highway) {
   return (h > 0 ? `約${h}時間${m > 0 ? m+'分' : ''}` : `約${m}分`) + restNote;
 }
 
-function calculate() {
+async function calculate() {
   const o = document.getElementById('origin').value;
   const d = document.getElementById('destination').value;
   const weight = 0;
   const hours = parseFloat(document.getElementById('hoursSelect').value) || 2;
 
   // 時間制は出発地・目的地不要
-  let km = 0, tollBase = 0, isEstimate = false, isDirect = false;
+  let km = 0, tollBase = 0, isEstimate = false, isDirect = false, isRoad = false;
   const directKmVal = parseInt(document.getElementById('directKm').value);
   if (fareType === 'distance') {
     if (directKmVal && directKmVal > 0) {
@@ -778,8 +812,11 @@ function calculate() {
         km = ROUTES[key].km;
         tollBase = ROUTES[key].toll;
       } else {
+        const road = await fetchRoadKm(o, d);
         const est = estimateRoute(o, d);
-        if (est) {
+        if (road) {
+          km = road.km; tollBase = road.toll; isRoad = true;
+        } else if (est) {
           km = est.km; tollBase = est.toll; isEstimate = true;
         } else {
           km = parseInt(document.getElementById('manualKm').value);
@@ -809,11 +846,13 @@ function calculate() {
   document.getElementById('rTotal').textContent = '¥' + total.toLocaleString();
   document.getElementById('rSub').textContent = isEstimate
     ? '※距離は推定値です。実走距離で金額が確定します。'
+    : isRoad
+    ? '※距離は地図の道のり（市役所間の目安）です。'
     : (toll > 0 ? '（高速代±数百円の変動あり）' : '');
   document.getElementById('rRoute').textContent = fareType === 'time'
     ? `時間制 ${fmtH(hours)}貸切`
     : isDirect ? `距離指定 ${km}km` : `${o} → ${d}`;
-  document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
+  document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : isRoad ? '（道のり）' : '');
   document.getElementById('rBase').textContent = fareType === 'time'
     ? `¥${base.toLocaleString()}（${fmtH(hours)}・${km}km）`
     : '¥' + base.toLocaleString();
