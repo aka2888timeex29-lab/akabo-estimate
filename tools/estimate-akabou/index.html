@@ -293,25 +293,19 @@
     <label>貸切時間</label>
     <select id="hoursSelect">
       <option value="2">2時間（基本）</option>
-      <option value="2.5">2時間30分</option>
-      <option value="3">3時間</option>
-      <option value="3.5">3時間30分</option>
-      <option value="4">4時間</option>
-      <option value="4.5">4時間30分</option>
-      <option value="5">5時間</option>
-      <option value="5.5">5時間30分</option>
-      <option value="6">6時間</option>
-      <option value="6.5">6時間30分</option>
-      <option value="7">7時間</option>
-      <option value="7.5">7時間30分</option>
-      <option value="8">8時間</option>
-      <option value="8.5">8時間30分</option>
-      <option value="9">9時間</option>
-      <option value="9.5">9時間30分</option>
-      <option value="10">10時間</option>
-      <option value="11">11時間</option>
-      <option value="12">12時間</option>
     </select>
+    <script>
+      // 貸切時間の選択肢を2〜24時間・30分刻みで生成
+      (function(){
+        const sel = document.getElementById('hoursSelect');
+        for (let h = 2.5; h <= 24; h += 0.5) {
+          const opt = document.createElement('option');
+          opt.value = h;
+          opt.textContent = (h % 1 === 0) ? `${h}時間` : `${Math.floor(h)}時間30分`;
+          sel.appendChild(opt);
+        }
+      })();
+    </script>
     <label>走行距離（km）※任意・距離超過計算用</label>
     <input type="number" id="timeKm" placeholder="例: 30（空白=距離超過なし）" min="0" max="500" style="margin-bottom:8px;">
     <div class="fare-table" style="margin-top:0; margin-bottom:14px;">
@@ -544,6 +538,11 @@ function calcDistanceFare(km) {
   return Math.round(fare * 1.1);
 }
 
+// ===== 時間表示（13.5 → 13時間30分） =====
+function fmtH(hours) {
+  return (hours % 1 === 0) ? `${hours}時間` : `${Math.floor(hours)}時間30分`;
+}
+
 // ===== 時間制運賃計算（税込） =====
 function calcTimeFare(hours, km) {
   const base = 5500;
@@ -647,11 +646,11 @@ function calculate() {
   }
 
   document.getElementById('rRoute').textContent = fareType === 'time'
-    ? `時間制 ${hours}時間貸切`
+    ? `時間制 ${fmtH(hours)}貸切`
     : isDirect ? `距離指定 ${km}km` : `${o} → ${d}`;
   document.getElementById('rKm').textContent = km + 'km' + (isEstimate ? '（推定）' : '');
   document.getElementById('rBase').textContent = fareType === 'time'
-    ? `¥${base.toLocaleString()}（${hours}時間・${km}km）`
+    ? `¥${base.toLocaleString()}（${fmtH(hours)}・${km}km）`
     : '¥' + base.toLocaleString();
   document.getElementById('rHighway').textContent = useHighway ? `¥${toll.toLocaleString()}（目安）` : '利用なし';
   document.getElementById('rTime').textContent = calcTime(km, useHighway);
@@ -675,7 +674,7 @@ function copyText() {
       '【赤帽 お見積もり】',
       '━━━━━━━━━━━━',
       e.fareType === 'time'
-        ? `時間制貸切：${e.hours}時間・${e.km}km`
+        ? `時間制貸切：${fmtH(e.hours)}・${e.km}km`
         : e.isDirect ? `距離：${e.km}km` : `ルート：${e.o} → ${e.d}（${e.km}km）`,
       '━━━━━━━━━━━━',
       `運賃（税別）：¥${e.baseExTax.toLocaleString()}`,
@@ -695,7 +694,7 @@ function copyText() {
       '【赤帽 お見積もり】',
       '━━━━━━━━━━━━',
       e.fareType === 'time'
-        ? `時間制貸切：${e.hours}時間・${e.km}km`
+        ? `時間制貸切：${fmtH(e.hours)}・${e.km}km`
         : e.isDirect ? `距離：${e.km}km` : `ルート：${e.o} → ${e.d}（${e.km}km）`,
       '━━━━━━━━━━━━',
       `合計：¥${e.total.toLocaleString()}（税込）`,
